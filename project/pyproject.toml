@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pixel-loom"
+version = "0.7.6"
+description = "A local pixel-art editor with first-class MCP tools for humans and AI agents"
+readme = "README.en.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "Pixel Loom contributors" }]
+dependencies = ["Pillow>=10.3,<13", "mcp>=1.30,<2", "jsonschema>=4.20,<5", "pywin32>=306; sys_platform == 'win32'"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3",
+  "Topic :: Multimedia :: Graphics :: Editors :: Raster-Based",
+]
+
+[project.urls]
+Homepage = "https://github.com/yangsir2077/pixel-loom"
+Repository = "https://github.com/yangsir2077/pixel-loom"
+Issues = "https://github.com/yangsir2077/pixel-loom/issues"
+Changelog = "https://github.com/yangsir2077/pixel-loom/blob/main/project/CHANGELOG.md"
+
+[project.optional-dependencies]
+dev = ["build>=1.2", "ruff>=0.11"]
+
+[project.gui-scripts]
+pixel-loom = "pixel_workbench.entrypoints:main"
+
+[project.scripts]
+pixel-loom-mcp = "pixel_workbench.entrypoints:mcp_main"
+pixel-loom-cli = "pixel_workbench.entrypoints:cli_main"
+pixel-loom-config = "pixel_workbench.integration:main"
+
+[tool.setuptools.packages.find]
+include = ["pixel_workbench*"]
+
+[tool.setuptools.package-data]
+pixel_workbench = ["resources/*", "resources/support/*"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E9", "F63", "F7", "F82"]

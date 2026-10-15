@@ -1,0 +1,6 @@
+[mcp_servers.pixel_loom]
+# TEMPLATE: run pixel-loom-config --format codex to generate your real path.
+command = '/absolute/path/to/your/venv/python'
+args = ['-m', 'pixel_workbench', '--mcp']
+startup_timeout_sec = 25
+tool_timeout_sec = 60

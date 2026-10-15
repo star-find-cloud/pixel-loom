@@ -1,0 +1,9 @@
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.jpg -text
+*.jpeg -text
+*.png -text
+*.gif -text
+*.exe -text
+*.dll -text
+*.zip -text

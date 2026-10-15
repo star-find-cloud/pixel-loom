@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "pixel-loom": {
+      "command": "/absolute/path/to/your/venv/python",
+      "args": ["-m", "pixel_workbench", "--mcp"]
+    }
+  }
+}

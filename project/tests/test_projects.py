@@ -1,0 +1,208 @@
+from pathlib import Path
+import json
+import tempfile
+import unittest
+from unittest.mock import patch
+
+from pixel_workbench.model import Document, PixelError
+from pixel_workbench.projects import frame_at
+from pixel_workbench.service import DocumentService
+
+
+class ProjectTests(unittest.TestCase):
+    def setUp(self):
+        self.temp=tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root=Path(self.temp.name)
+        self.service=DocumentService(Document(16,24,'Idle'),workspace=self.root/'work',runtime=self.root/'data')
+
+    def call(self,action,**fields):
+        return self.service.projects_action(dict(action=action,expected_document_id=self.service.doc.id,
+                                                expected_revision=self.service.doc.revision,**fields))
+
+    def paint(self,color=7):
+        self.service.doc.apply([{'op':'pixel','x':2,'y':3,'color':color}])
+
+    def test_fork_saves_unsaved_original_and_new_identity_without_overwrite(self):
+        self.paint()
+        original=self.service.doc.id
+        color=self.service.doc.composite().getpixel((2,3))
+        result=self.call('fork',name='Walk')
+        self.assertEqual([p['number'] for p in result['projects']],[1,2])
+        self.assertEqual(result['projects'][0]['document_id'],original)
+        self.assertNotEqual(self.service.doc.id,original)
+        first=Path(result['projects'][0]['path'])
+        before=first.read_bytes()
+        self.paint(8)
+        self.service.save_project()
+        self.assertEqual(first.read_bytes(),before)
+        self.call('switch',project_id=result['projects'][0]['id'])
+        self.assertEqual(self.service.doc.composite().getpixel((2,3)),color)
+        self.assertEqual(self.service.doc.name,'Idle')
+
+    def test_switch_checkpoints_dirty_project_and_library_survives_restart(self):
+        first=self.call('fork',name='Walk')['projects'][0]
+        second=self.service.projects.by_path(self.service.path)
+        self.paint()
+        self.call('switch',project_id=first['id'])
+        restored=DocumentService(workspace=self.service.workspace,runtime=self.service.runtime)
+        self.assertEqual(len(restored.projects.entries),2)
+        restored.projects_action(dict(action='switch',project_id=second['id'],expected_document_id=restored.doc.id,
+                                     expected_revision=restored.doc.revision))
+        self.assertNotEqual(restored.doc.composite().getpixel((2,3))[3],0)
+
+    def test_saved_versions_restore_into_new_project(self):
+        self.service.checkpoint_current()
+        original=self.service.projects.by_path(self.service.path)
+        self.paint()
+        self.service.save_project()
+        current=Path(self.service.path).read_bytes()
+        versions=self.call('versions',project_id=original['id'])['versions']
+        self.assertEqual(len(versions),1)
+        self.call('restore',project_id=original['id'],version_id=versions[0]['id'],name='Restored idle')
+        self.assertNotEqual(self.service.path,Path(original['path']))
+        self.assertEqual(Path(original['path']).read_bytes(),current)
+        self.assertEqual(self.service.doc.composite().getpixel((2,3))[3],0)
+        self.assertNotEqual(self.service.doc.id,original['document_id'])
+
+    def test_backup_failure_prevents_save_overwrite(self):
+        self.service.checkpoint_current()
+        target=self.service.path
+        before=target.read_bytes()
+        self.paint()
+        with patch.object(self.service.projects,'backup',side_effect=OSError('Disk full')):
+            with self.assertRaises(OSError):self.service.save_project()
+        self.assertEqual(target.read_bytes(),before)
+        self.assertTrue(self.service.dirty)
+
+    def test_register_cannot_hide_external_changes_to_active_file(self):
+        self.service.checkpoint_current()
+        changed=Document.open(self.service.path)
+        changed.name='External edit'
+        changed.save(self.service.path)
+        with self.assertRaises(PixelError) as exc:self.call('register',path=str(self.service.path))
+        self.assertEqual(exc.exception.code,'PROJECT_FILE_CHANGED')
+
+    def test_external_file_change_prevents_silent_overwrite(self):
+        self.service.checkpoint_current()
+        target=self.service.path
+        changed=Document.open(target)
+        changed.name='External edit'
+        changed.save(target)
+        before=target.read_bytes()
+        self.paint()
+        with self.assertRaises(PixelError) as exc:self.service.save_project()
+        self.assertEqual(exc.exception.code,'PROJECT_FILE_CHANGED')
+        self.assertEqual(target.read_bytes(),before)
+
+    def test_missing_switch_target_preserves_unsaved_current(self):
+        entries=self.call('fork',name='Walk')['projects']
+        Path(entries[0]['path']).unlink()
+        self.paint()
+        before=self.service.doc.to_dict()
+        with self.assertRaises(OSError):self.call('switch',project_id=entries[0]['id'])
+        self.assertEqual(self.service.doc.to_dict(),before)
+        self.assertTrue(self.service.dirty)
+
+    def test_fork_collision_and_stale_tokens_preserve_original(self):
+        self.service.checkpoint_current()
+        original=self.service.doc.id
+        with self.assertRaises(PixelError):self.call('fork',path=str(self.service.path))
+        self.assertEqual(self.service.doc.id,original)
+        with self.assertRaises(PixelError):
+            self.service.projects_action(dict(action='fork',expected_revision=-1,expected_document_id=original))
+        self.assertEqual(len(self.service.projects.entries),1)
+
+    def test_compare_is_read_only_and_includes_active_unsaved_pixels(self):
+        self.paint()
+        entries=self.call('fork',name='Walk')['projects']
+        self.paint(8)
+        before=self.service.doc.to_dict()
+        files={p:p.read_bytes() for p in self.service.workspace.rglob('*.pixloom')}
+        ids=[p['id'] for p in entries]
+        result=self.call('compare',project_ids=ids,view='time',time_ms=150)
+        self.assertEqual(len(result['images_png']),2)
+        self.assertTrue(result['projects'][1]['current_unsaved'])
+        self.assertEqual(result['projects'][1]['frames'],[0])
+        self.assertEqual(self.service.doc.to_dict(),before)
+        self.assertTrue(all(p.read_bytes()==raw for p,raw in files.items()))
+
+    def test_real_duration_and_paged_comparisons(self):
+        self.service.doc.apply([{'op':'frame_add'} for _ in range(9)]+[{'op':'frame_set','frame':0,'duration_ms':200}])
+        entries=self.call('fork',name='Walk')['projects']
+        self.assertEqual(frame_at(self.service.doc,199),0)
+        self.assertEqual(frame_at(self.service.doc,200),1)
+        result=self.call('compare',project_ids=[p['id'] for p in entries],page=1)
+        self.assertEqual(result['pages'],2)
+        self.assertEqual(result['projects'][0]['frames'],[8,9])
+
+    def test_version_id_cannot_escape_history_directory(self):
+        self.service.checkpoint_current()
+        entry=self.service.projects.by_path(self.service.path)
+        with self.assertRaises(PixelError):self.call('restore',project_id=entry['id'],version_id='../../other')
+
+    def test_remove_inactive_preserves_files_history_and_dirty_active(self):
+        first=self.call('fork',name='Walk')['projects'][0]
+        path=Path(first['path'])
+        before=path.read_bytes()
+        self.paint()
+        current=self.service.doc.to_dict()
+        self.call('remove',project_id=first['id'])
+        self.assertEqual(path.read_bytes(),before)
+        self.assertEqual(self.service.doc.to_dict(),current)
+        self.assertTrue(self.service.dirty)
+        self.assertEqual(len(self.call('list')['projects']),1)
+        self.assertEqual(self.call('deleted')['projects'][0]['id'],first['id'])
+        with self.assertRaises(PixelError):self.call('switch',project_id=first['id'])
+        restored=self.call('undelete',project_id=first['id'])['projects'][0]
+        self.assertEqual(restored['id'],first['id'])
+        self.assertEqual(restored['number'],1)
+
+    def test_remove_active_saves_dirty_pixels_and_switches_then_restores(self):
+        first=self.call('fork',name='Walk')['projects'][0]
+        active=dict(self.service.projects.by_path(self.service.path))
+        self.paint()
+        self.call('remove',project_id=active['id'])
+        self.assertEqual(self.service.doc.id,first['document_id'])
+        self.assertTrue(Document.open(active['path']).composite().getpixel((2,3))[3])
+        self.call('undelete',project_id=active['id'])
+        self.assertTrue(self.call('versions',project_id=active['id'])['versions'])
+        self.call('switch',project_id=active['id'])
+        self.assertTrue(self.service.doc.composite().getpixel((2,3))[3])
+
+    def test_remove_all_leaves_empty_shelf_and_no_startup_path(self):
+        entries=self.call('fork',name='Walk')['projects']
+        removed=self.call('remove',project_ids=[entry['id'] for entry in entries])
+        self.assertFalse(removed['projects'])
+        self.assertIsNone(self.service.path)
+        self.assertFalse(self.service.dirty)
+        self.assertIsNone(json.loads((self.service.runtime/'last-project.json').read_text(encoding='utf-8'))['path'])
+        restart=DocumentService(workspace=self.service.workspace,runtime=self.service.runtime)
+        self.assertEqual(len(restart.projects.listing()),0)
+        self.assertEqual(len(restart.projects.listing(deleted=True)),2)
+        self.call('new',name='New after deletion')
+        self.assertEqual(self.service.projects.by_path(self.service.path)['number'],3)
+
+    def test_invalid_batch_remove_does_not_remove_any_project(self):
+        entries=self.call('fork',name='Walk')['projects']
+        before=self.service.doc.to_dict()
+        with self.assertRaises(PixelError):self.call('remove',project_ids=[entries[0]['id'],'missing'])
+        self.assertEqual(len(self.call('list')['projects']),2)
+        self.assertEqual(self.service.doc.to_dict(),before)
+
+    def test_failed_catalog_write_rolls_back_deleted_flags(self):
+        self.service.checkpoint_current()
+        entry=self.service.projects.by_path(self.service.path)
+        with patch.object(self.service.projects,'persist',side_effect=OSError('Disk full')):
+            with self.assertRaises(OSError):self.service.projects.set_deleted([entry['id']])
+        self.assertEqual(len(self.service.projects.listing()),1)
+        self.assertFalse(self.service.projects.listing(deleted=True))
+
+    def test_adding_deleted_file_restores_same_identity(self):
+        self.service.checkpoint_current()
+        entry=dict(self.service.projects.by_path(self.service.path))
+        self.call('remove',project_id=entry['id'])
+        self.call('register',path=entry['path'])
+        restored=self.call('list')['projects'][0]
+        self.assertEqual(restored['id'],entry['id'])
+        self.assertEqual(restored['number'],entry['number'])

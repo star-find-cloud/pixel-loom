@@ -1,0 +1,9 @@
+{
+  "method": "wechat",
+  "options": [
+    {"amount_yuan": 5, "image": "wechat-05.jpg"},
+    {"amount_yuan": 10, "image": "wechat-10.jpg"},
+    {"amount_yuan": 15, "image": "wechat-15.jpg"},
+    {"amount_yuan": 20, "image": "wechat-20.jpg"}
+  ]
+}

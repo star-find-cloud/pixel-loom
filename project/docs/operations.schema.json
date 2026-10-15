@@ -1,0 +1,2115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Pixel Loom edit operation",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "pixel",
+          "type": "string"
+        },
+        "layer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Stable layer id or unique layer name; defaults to active layer."
+        },
+        "frame": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "clip": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "description": "Named region"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 512
+              },
+              "minItems": 4,
+              "maxItems": 4
+            }
+          ]
+        },
+        "x": {
+          "type": "integer",
+          "minimum": -4096,
+          "maximum": 4096
+        },
+        "y": {
+          "type": "integer",
+          "minimum": -4096,
+          "maximum": 4096
+        },
+        "color": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "minItems": 3,
+              "maxItems": 4
+            }
+          ],
+          "description": "Palette index, #RRGGBB/#RRGGBBAA, or [r,g,b,a]. Alpha 0 is transparent."
+        }
+      },
+      "required": [
+        "op",
+        "x",
+        "y"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "stroke",
+          "type": "string"
+        },
+        "layer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Stable layer id or unique layer name; defaults to active layer."
+        },
+        "frame": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "clip": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "description": "Named region"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 512
+              },
+              "minItems": 4,
+              "maxItems": 4
+            }
+          ]
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": -4096,
+              "maximum": 4096
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "minItems": 1,
+          "maxItems": 100000
+        },
+        "color": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "minItems": 3,
+              "maxItems": 4
+            }
+          ],
+          "description": "Palette index, #RRGGBB/#RRGGBBAA, or [r,g,b,a]. Alpha 0 is transparent."
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        }
+      },
+      "required": [
+        "op",
+        "points"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "line",
+          "type": "string"
+        },
+        "layer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Stable layer id or unique layer name; defaults to active layer."
+        },
+        "frame": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "clip": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "description": "Named region"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 512
+              },
+              "minItems": 4,
+              "maxItems": 4
+            }
+          ]
+        },
+        "x1": {
+          "type": "integer",
+          "minimum": -4096,
+          "maximum": 4096
+        },
+        "y1": {
+          "type": "integer",
+          "minimum": -4096,
+          "maximum": 4096
+        },
+        "x2": {
+          "type": "integer",
+          "minimum": -4096,
+          "maximum": 4096
+        },
+        "y2": {
+          "type": "integer",
+          "minimum": -4096,
+          "maximum": 4096
+        },
+        "color": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "minItems": 3,
+              "maxItems": 4
+            }
+          ],
+          "description": "Palette index, #RRGGBB/#RRGGBBAA, or [r,g,b,a]. Alpha 0 is transparent."
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        }
+      },
+      "required": [
+        "op",
+        "x1",
+        "y1",
+        "x2",
+        "y2"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "rect",
+          "type": "string"
+        },
+        "layer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Stable layer id or unique layer name; defaults to active layer."
+        },
+        "frame": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "clip": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "description": "Named region"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 512
+              },
+              "minItems": 4,
+              "maxItems": 4
+            }
+          ]
+        },
+        "x": {
+          "type": "integer",
+          "minimum": -4096,
+          "maximum": 4096
+        },
+        "y": {
+          "type": "integer",
+          "minimum": -4096,
+          "maximum": 4096
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "color": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "minItems": 3,
+              "maxItems": 4
+            }
+          ],
+          "description": "Palette index, #RRGGBB/#RRGGBBAA, or [r,g,b,a]. Alpha 0 is transparent."
+        },
+        "filled": {
+          "type": "boolean"
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        }
+      },
+      "required": [
+        "op",
+        "x",
+        "y",
+        "width",
+        "height"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "ellipse",
+          "type": "string"
+        },
+        "layer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Stable layer id or unique layer name; defaults to active layer."
+        },
+        "frame": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "clip": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "description": "Named region"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 512
+              },
+              "minItems": 4,
+              "maxItems": 4
+            }
+          ]
+        },
+        "x": {
+          "type": "integer",
+          "minimum": -4096,
+          "maximum": 4096
+        },
+        "y": {
+          "type": "integer",
+          "minimum": -4096,
+          "maximum": 4096
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "color": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "minItems": 3,
+              "maxItems": 4
+            }
+          ],
+          "description": "Palette index, #RRGGBB/#RRGGBBAA, or [r,g,b,a]. Alpha 0 is transparent."
+        },
+        "filled": {
+          "type": "boolean"
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        }
+      },
+      "required": [
+        "op",
+        "x",
+        "y",
+        "width",
+        "height"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "polygon",
+          "type": "string"
+        },
+        "layer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Stable layer id or unique layer name; defaults to active layer."
+        },
+        "frame": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "clip": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "description": "Named region"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 512
+              },
+              "minItems": 4,
+              "maxItems": 4
+            }
+          ]
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": -4096,
+              "maximum": 4096
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "minItems": 3,
+          "maxItems": 1024
+        },
+        "color": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "minItems": 3,
+              "maxItems": 4
+            }
+          ],
+          "description": "Palette index, #RRGGBB/#RRGGBBAA, or [r,g,b,a]. Alpha 0 is transparent."
+        },
+        "filled": {
+          "type": "boolean"
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        }
+      },
+      "required": [
+        "op",
+        "points"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "bezier",
+          "type": "string"
+        },
+        "layer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Stable layer id or unique layer name; defaults to active layer."
+        },
+        "frame": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "clip": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "description": "Named region"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 512
+              },
+              "minItems": 4,
+              "maxItems": 4
+            }
+          ]
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": -4096,
+              "maximum": 4096
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "minItems": 3,
+          "maxItems": 4
+        },
+        "color": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "minItems": 3,
+              "maxItems": 4
+            }
+          ],
+          "description": "Palette index, #RRGGBB/#RRGGBBAA, or [r,g,b,a]. Alpha 0 is transparent."
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        }
+      },
+      "required": [
+        "op",
+        "points"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "fill",
+          "type": "string"
+        },
+        "layer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Stable layer id or unique layer name; defaults to active layer."
+        },
+        "frame": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "clip": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "description": "Named region"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 512
+              },
+              "minItems": 4,
+              "maxItems": 4
+            }
+          ]
+        },
+        "x": {
+          "type": "integer",
+          "minimum": -4096,
+          "maximum": 4096
+        },
+        "y": {
+          "type": "integer",
+          "minimum": -4096,
+          "maximum": 4096
+        },
+        "color": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "minItems": 3,
+              "maxItems": 4
+            }
+          ],
+          "description": "Palette index, #RRGGBB/#RRGGBBAA, or [r,g,b,a]. Alpha 0 is transparent."
+        }
+      },
+      "required": [
+        "op",
+        "x",
+        "y"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "clear",
+          "type": "string"
+        },
+        "layer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Stable layer id or unique layer name; defaults to active layer."
+        },
+        "frame": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "clip": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "description": "Named region"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 512
+              },
+              "minItems": 4,
+              "maxItems": 4
+            }
+          ]
+        }
+      },
+      "required": [
+        "op"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "replace",
+          "type": "string"
+        },
+        "layer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Stable layer id or unique layer name; defaults to active layer."
+        },
+        "frame": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "clip": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "description": "Named region"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 512
+              },
+              "minItems": 4,
+              "maxItems": 4
+            }
+          ]
+        },
+        "old_color": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "minItems": 3,
+              "maxItems": 4
+            }
+          ],
+          "description": "Palette index, #RRGGBB/#RRGGBBAA, or [r,g,b,a]. Alpha 0 is transparent."
+        },
+        "color": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "minItems": 3,
+              "maxItems": 4
+            }
+          ],
+          "description": "Palette index, #RRGGBB/#RRGGBBAA, or [r,g,b,a]. Alpha 0 is transparent."
+        }
+      },
+      "required": [
+        "op",
+        "old_color"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "translate",
+          "type": "string"
+        },
+        "layer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Stable layer id or unique layer name; defaults to active layer."
+        },
+        "frame": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "clip": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "description": "Named region"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 512
+              },
+              "minItems": 4,
+              "maxItems": 4
+            }
+          ]
+        },
+        "dx": {
+          "type": "integer",
+          "minimum": -4096,
+          "maximum": 4096
+        },
+        "dy": {
+          "type": "integer",
+          "minimum": -4096,
+          "maximum": 4096
+        }
+      },
+      "required": [
+        "op",
+        "dx",
+        "dy"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "flip",
+          "type": "string"
+        },
+        "layer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Stable layer id or unique layer name; defaults to active layer."
+        },
+        "frame": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "clip": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "description": "Named region"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 512
+              },
+              "minItems": 4,
+              "maxItems": 4
+            }
+          ]
+        },
+        "axis": {
+          "enum": [
+            "horizontal",
+            "vertical"
+          ]
+        }
+      },
+      "required": [
+        "op"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "outline",
+          "type": "string"
+        },
+        "layer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Stable layer id or unique layer name; defaults to active layer."
+        },
+        "frame": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "clip": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "description": "Named region"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 512
+              },
+              "minItems": 4,
+              "maxItems": 4
+            }
+          ]
+        },
+        "color": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "minItems": 3,
+              "maxItems": 4
+            }
+          ],
+          "description": "Palette index, #RRGGBB/#RRGGBBAA, or [r,g,b,a]. Alpha 0 is transparent."
+        },
+        "diagonal": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "op"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "dither",
+          "type": "string"
+        },
+        "layer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Stable layer id or unique layer name; defaults to active layer."
+        },
+        "frame": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "clip": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "description": "Named region"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 512
+              },
+              "minItems": 4,
+              "maxItems": 4
+            }
+          ]
+        },
+        "rect": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 512
+          },
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "color": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "minItems": 3,
+              "maxItems": 4
+            }
+          ],
+          "description": "Palette index, #RRGGBB/#RRGGBBAA, or [r,g,b,a]. Alpha 0 is transparent."
+        },
+        "other_color": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "minItems": 3,
+              "maxItems": 4
+            }
+          ],
+          "description": "Palette index, #RRGGBB/#RRGGBBAA, or [r,g,b,a]. Alpha 0 is transparent."
+        }
+      },
+      "required": [
+        "op",
+        "other_color"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "stamp",
+          "type": "string"
+        },
+        "layer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Stable layer id or unique layer name; defaults to active layer."
+        },
+        "frame": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "clip": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "description": "Named region"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 512
+              },
+              "minItems": 4,
+              "maxItems": 4
+            }
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Previously defined stamp name"
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "Pixel symbols; '.' skips a pixel"
+          },
+          "minItems": 1,
+          "maxItems": 512
+        },
+        "colors": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                },
+                "minItems": 3,
+                "maxItems": 4
+              }
+            ],
+            "description": "Palette index, #RRGGBB/#RRGGBBAA, or [r,g,b,a]. Alpha 0 is transparent."
+          }
+        },
+        "x": {
+          "type": "integer",
+          "minimum": -4096,
+          "maximum": 4096
+        },
+        "y": {
+          "type": "integer",
+          "minimum": -4096,
+          "maximum": 4096
+        },
+        "scale": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        }
+      },
+      "required": [
+        "op"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "stamp_define",
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Previously defined stamp name"
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "Pixel symbols; '.' skips a pixel"
+          },
+          "minItems": 1,
+          "maxItems": 512
+        },
+        "colors": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                },
+                "minItems": 3,
+                "maxItems": 4
+              }
+            ],
+            "description": "Palette index, #RRGGBB/#RRGGBBAA, or [r,g,b,a]. Alpha 0 is transparent."
+          }
+        }
+      },
+      "required": [
+        "op",
+        "name",
+        "rows",
+        "colors"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "region_define",
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": ""
+        },
+        "rect": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 512
+          },
+          "minItems": 4,
+          "maxItems": 4
+        }
+      },
+      "required": [
+        "op",
+        "name",
+        "rect"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "region_delete",
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": ""
+        }
+      },
+      "required": [
+        "op",
+        "name"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "selection_set",
+          "type": "string"
+        },
+        "rect": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 512
+          },
+          "minItems": 4,
+          "maxItems": 4
+        }
+      },
+      "required": [
+        "op"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "region_transform",
+          "type": "string"
+        },
+        "rect": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "description": "Named region"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 512
+              },
+              "minItems": 4,
+              "maxItems": 4
+            }
+          ]
+        },
+        "kind": {
+          "enum": [
+            "translate",
+            "flip_horizontal",
+            "flip_vertical",
+            "rotate_cw",
+            "rotate_ccw"
+          ]
+        },
+        "dx": {
+          "type": "integer",
+          "minimum": -4096,
+          "maximum": 4096
+        },
+        "dy": {
+          "type": "integer",
+          "minimum": -4096,
+          "maximum": 4096
+        },
+        "copy": {
+          "type": "boolean"
+        },
+        "update_region": {
+          "type": "boolean"
+        },
+        "layer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Stable layer id or unique layer name; defaults to active layer."
+        },
+        "frame": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        }
+      },
+      "required": [
+        "op",
+        "kind"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "region_copy",
+          "type": "string"
+        },
+        "rect": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "description": "Named region"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 512
+              },
+              "minItems": 4,
+              "maxItems": 4
+            }
+          ]
+        },
+        "x": {
+          "type": "integer",
+          "minimum": -4096,
+          "maximum": 4096
+        },
+        "y": {
+          "type": "integer",
+          "minimum": -4096,
+          "maximum": 4096
+        },
+        "source_layer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Stable layer id or unique layer name; defaults to active layer."
+        },
+        "source_frame": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "layer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Stable layer id or unique layer name; defaults to active layer."
+        },
+        "frame": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "blend": {
+          "enum": [
+            "replace",
+            "over"
+          ]
+        }
+      },
+      "required": [
+        "op",
+        "rect",
+        "x",
+        "y"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "canvas_resize",
+          "type": "string"
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 512
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 512
+        },
+        "anchor": {
+          "enum": [
+            "top_left",
+            "center",
+            "bottom_center"
+          ]
+        }
+      },
+      "required": [
+        "op",
+        "width",
+        "height"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "sprite_scale",
+          "type": "string"
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 512
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 512
+        }
+      },
+      "required": [
+        "op",
+        "width",
+        "height"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "layer_add",
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": ""
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": ""
+        }
+      },
+      "required": [
+        "op"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "layer_set",
+          "type": "string"
+        },
+        "layer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Stable layer id or unique layer name; defaults to active layer."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": ""
+        },
+        "visible": {
+          "type": "boolean"
+        },
+        "locked": {
+          "type": "boolean"
+        },
+        "opacity": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        }
+      },
+      "required": [
+        "op"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "layer_move",
+          "type": "string"
+        },
+        "layer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Stable layer id or unique layer name; defaults to active layer."
+        },
+        "index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 63
+        }
+      },
+      "required": [
+        "op",
+        "index"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "layer_delete",
+          "type": "string"
+        },
+        "layer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Stable layer id or unique layer name; defaults to active layer."
+        }
+      },
+      "required": [
+        "op"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "layer_duplicate",
+          "type": "string"
+        },
+        "layer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Stable layer id or unique layer name; defaults to active layer."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": ""
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": ""
+        }
+      },
+      "required": [
+        "op"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "layer_merge_down",
+          "type": "string"
+        },
+        "layer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Stable layer id or unique layer name; defaults to active layer."
+        }
+      },
+      "required": [
+        "op"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "frame_add",
+          "type": "string"
+        },
+        "after": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "copy_from": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "blank": {
+          "type": "boolean"
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 16,
+          "maximum": 60000
+        }
+      },
+      "required": [
+        "op"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "frame_set",
+          "type": "string"
+        },
+        "frame": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 16,
+          "maximum": 60000
+        }
+      },
+      "required": [
+        "op",
+        "duration_ms"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "frame_delete",
+          "type": "string"
+        },
+        "frame": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        }
+      },
+      "required": [
+        "op"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "frame_move",
+          "type": "string"
+        },
+        "frame": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        }
+      },
+      "required": [
+        "op",
+        "frame",
+        "index"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "frame_duplicate_range",
+          "type": "string"
+        },
+        "start": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "end": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "after": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        }
+      },
+      "required": [
+        "op",
+        "start",
+        "end",
+        "after"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "tag_set",
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": ""
+        },
+        "start": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "end": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "direction": {
+          "enum": [
+            "forward",
+            "reverse",
+            "pingpong"
+          ]
+        }
+      },
+      "required": [
+        "op",
+        "name",
+        "start",
+        "end"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "tag_delete",
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": ""
+        }
+      },
+      "required": [
+        "op",
+        "name"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "select",
+          "type": "string"
+        },
+        "layer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Stable layer id or unique layer name; defaults to active layer."
+        },
+        "frame": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        }
+      },
+      "required": [
+        "op"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "palette_add",
+          "type": "string"
+        },
+        "colors": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                },
+                "minItems": 3,
+                "maxItems": 4
+              }
+            ],
+            "description": "Palette index, #RRGGBB/#RRGGBBAA, or [r,g,b,a]. Alpha 0 is transparent."
+          },
+          "minItems": 1,
+          "maxItems": 256
+        }
+      },
+      "required": [
+        "op",
+        "colors"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "palette_set",
+          "type": "string"
+        },
+        "colors": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                },
+                "minItems": 3,
+                "maxItems": 4
+              }
+            ],
+            "description": "Palette index, #RRGGBB/#RRGGBBAA, or [r,g,b,a]. Alpha 0 is transparent."
+          },
+          "minItems": 1,
+          "maxItems": 256
+        },
+        "remap": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "op",
+        "colors"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "palette_lock",
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "op",
+        "enabled"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "rename",
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": ""
+        }
+      },
+      "required": [
+        "op",
+        "name"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "reference_context",
+          "type": "string"
+        },
+        "data": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "op",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "quality_policy",
+          "type": "string"
+        },
+        "data": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "op",
+        "data"
+      ]
+    }
+  ]
+}
