@@ -21,7 +21,8 @@ def component_names(folder):
 
     reader = CArchiveReader(str(folder / "PixelLoom.exe"))
     archive = reader.open_embedded_archive(next(name for name in reader.toc if name.endswith(".pyz")))
-    roots = {name.split(".")[0] for name in archive.toc}
+    modules = set(archive.toc)
+    roots = {name.split(".")[0] for name in modules}
     owners = packages_distributions()
     names = {"pyinstaller", "mcp", "Pillow", "jsonschema", "pydantic", "pywin32"}
     for module in roots - sys.stdlib_module_names - {"pixel_workbench"}:
@@ -29,7 +30,17 @@ def component_names(folder):
             continue
         distributions = owners.get(module, [])
         if distributions:
-            names.update(distributions)
+            for owner in distributions:
+                if len(distributions) > 1:
+                    candidates = []
+                    for item in distribution(owner).files or []:
+                        path = Path(item)
+                        if path.suffix == ".py" and ".." not in path.parts:
+                            qualified = path.with_suffix("").as_posix().replace("/", ".")
+                            candidates.append(qualified.removesuffix(".__init__"))
+                    if not any(name in modules for name in candidates):
+                        continue  # Shared namespaces do not imply every installed owner is bundled.
+                names.add(owner)
         elif module.startswith(("win32", "pywin")) or module in ("commctrl", "winerror"):
             names.add("pywin32")
         else:
