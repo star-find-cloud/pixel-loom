@@ -30,7 +30,13 @@ def main():
     notices = folder / "THIRD_PARTY_LICENSES"
     notices.mkdir(exist_ok=True)
     included = []
-    for name in ("pyinstaller", "mcp", "Pillow", "jsonschema", "pydantic", "pywin32"):
+    components = ["pyinstaller", "mcp", "Pillow", "jsonschema", "pydantic", "pywin32"]
+    # Optional imports may be present in a build environment and collected by
+    # PyInstaller. Their native binaries need their own accompanying notices.
+    for name, pattern in (("cffi", "_cffi_backend*"), ("Brotli", "_brotli*")):
+        if any((folder / "_internal").glob(pattern)):
+            components.append(name)
+    for name in components:
         dist = distribution(name)
         number = 0
         for item in dist.files or []:

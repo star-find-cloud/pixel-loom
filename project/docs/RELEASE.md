@@ -21,7 +21,7 @@ python tools/build_release.py
 python -m build
 ```
 
-The source ZIP uses an explicit allowlist. Private artwork, reference media, third-party research artifacts, client registration records, local tokens, virtual environments and build caches stay out. The sdist also prunes private workspace trees. The wheel contains the application package and bundled example only.
+The source ZIP uses an explicit allowlist. Private artwork, reference media, third-party research artifacts, client registration records, local tokens, virtual environments and build caches stay out. The sdist also prunes private workspace trees. The wheel contains the application package, bundled example and intentionally supplied optional support-screen images.
 
 ## Windows portable folder
 
@@ -37,6 +37,16 @@ The two executables share libraries. A dedicated console entry point is necessar
 
 Run `PixelLoomMCP.exe --doctor` to inspect bundled dependency versions. For isolated protocol testing use `--mcp --headless --data-dir <temporary-dir> --workspace <temporary-workspace>`.
 
-Include README, LICENSE and dependency notices in the folder archive. Keep release checksums and validation notes. The MIT license file is included as the initial open-source license choice; change it before public distribution if the project owner chooses another license.
+The PyInstaller folder above is the intermediate, flat runtime. First collect dependency notices from the matching build environment with `python tools/package_windows.py --folder dist/PixelLoom`. This includes CFFI and Brotli notices when their native binaries are present. Keep the Python/Tk and transitive dependency license files too.
+
+For the downloadable layout documented in the root README, use the verified application folder and the handoff packager:
+
+```powershell
+python tools/package_handoff.py --app ../app --output-dir dist
+```
+
+Or pass the verified `dist/PixelLoom` folder after adding its validation report and a SHA256SUMS.txt manifest containing every runtime file. The handoff packager verifies the manifest and native-component notices, then writes `PixelLoom/app/`, the allowlisted complete `PixelLoom/project/`, and the root guide/launcher. It does not modify the input application folder. Output may be directed outside the repository to keep a local handoff clean.
+
+Include README, LICENSE and dependency notices in the folder archive. Keep release checksums and validation notes. The application code uses MIT; dependency code and notices retain their original licenses.
 
 Publishing, code signing, automatic updates, store submission and external GitHub CI execution are separate release actions and have not been performed by these local build commands.

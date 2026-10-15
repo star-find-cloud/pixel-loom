@@ -14,7 +14,7 @@ TOP = ["README.md", "README.en.md", "LICENSE", "CHANGELOG.md", "CONTRIBUTING.md"
        "setup.ps1", "launch.ps1", "打开像素织机.cmd", "mcp_server.py"]
 TREES = ["pixel_workbench", "docs", "skills", "tests", ".github"]
 EXTRA = ["integrations/connect.py", "integrations/codex.toml", "integrations/claude-desktop.json",
-         "tools/build_release.py", "tools/package_windows.py", "tools/frozen_entry.py", "tools/windows.spec"]
+         "tools/build_release.py", "tools/package_windows.py", "tools/package_handoff.py", "tools/frozen_entry.py", "tools/windows.spec"]
 PRIVATE_MARKERS = [re.compile(r"[A-Za-z]:[\\/]+xyx[0-9]+", re.I), re.compile(r"[A-Za-z]:[\\/]+Users[\\/]+[^\\/\s\"']+", re.I),
                    re.compile(r"wxid_[a-zA-Z0-9_]+"), re.compile(r"xwechat_files", re.I)]
 
