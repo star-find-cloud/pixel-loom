@@ -55,7 +55,9 @@ async def run(artifacts=None, server_executable=None):
             guide = data(await first.call_tool("pixel_onboard", {}))
             assert "one-time server registration" in guide["desktop_workflow"]
             assert guide["current_document"]["editor"]["mode"] == "headless"
-            assert guide["workspace"]["workspace"] == str(workspace)
+            # Windows may supply an 8.3 TEMP path; the application resolves it
+            # to its long form. Compare the directory identity, not spelling.
+            assert Path(guide["workspace"]["workspace"]).resolve() == workspace.resolve()
             state = data(await first.call_tool("pixel_project", {"action": "new", "width": 32, "height": 32, "name": "MCP public test"}))
             ops = guide["starter_recipe"]["ops"]
             observed = {"expected_revision": state["revision"], "expected_document_id": state["document_id"]}
