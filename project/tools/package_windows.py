@@ -1,7 +1,7 @@
 """Add distribution notices and archive an already-tested portable build."""
 from __future__ import annotations
 
-from importlib.metadata import distribution
+from importlib.metadata import Distribution, distribution, packages_distributions
 import argparse
 import hashlib
 import json
@@ -13,6 +13,60 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from pixel_workbench import __version__
+
+
+def component_names(folder):
+    """Read the actual frozen import graph, including optional indirect imports."""
+    from PyInstaller.archive.readers import CArchiveReader
+
+    reader = CArchiveReader(str(folder / "PixelLoom.exe"))
+    archive = reader.open_embedded_archive(next(name for name in reader.toc if name.endswith(".pyz")))
+    roots = {name.split(".")[0] for name in archive.toc}
+    owners = packages_distributions()
+    names = {"pyinstaller", "mcp", "Pillow", "jsonschema", "pydantic", "pywin32"}
+    for module in roots - sys.stdlib_module_names - {"pixel_workbench"}:
+        if module.startswith("pyi"):
+            continue
+        distributions = owners.get(module, [])
+        if distributions:
+            names.update(distributions)
+        elif module.startswith(("win32", "pywin")) or module in ("commctrl", "winerror"):
+            names.add("pywin32")
+        else:
+            raise ValueError(f"Identify the distribution and license for bundled module {module}")
+    for name, pattern in (("cffi", "_cffi_backend*"), ("Brotli", "_brotli*")):
+        if any((folder / "_internal").glob(pattern)):
+            names.add(name)
+    return sorted({name.lower().replace("_", "-").replace(".", "-") for name in names})
+
+
+def collect_notices(folder):
+    """Prefer metadata already bundled with the runtime; use its build environment for optional imports."""
+    folder = Path(folder)
+    notices = folder / "THIRD_PARTY_LICENSES"
+    notices.mkdir(exist_ok=True)
+    canonical = lambda name: name.lower().replace("_", "-").replace(".", "-")
+    bundled = {}
+    for path in (folder / "_internal").glob("*.dist-info"):
+        item = Distribution.at(path)
+        bundled[canonical(item.metadata["Name"])] = item
+    included = []
+    for name in component_names(folder):
+        dist = bundled.get(canonical(name)) or distribution(name)
+        number = 0
+        for item in dist.files or []:
+            source = Path(dist.locate_file(item))
+            if source.is_file() and any(word in source.name.lower() for word in ("license", "copying", "notice")):
+                number += 1
+                shutil.copy2(source, notices / f"{name}-{number}-{source.name}")
+        if not number:
+            raise ValueError(f"No license text found for bundled distribution {name}")
+        included.append({"name": name, "version": dist.version, "notice_files": number})
+    python_license = Path(sys.base_prefix) / "LICENSE.txt"
+    if python_license.exists():
+        shutil.copy2(python_license, notices / "Python-LICENSE.txt")
+    (notices / "components.json").write_text(json.dumps(included, indent=2), encoding="utf-8")
+    return included
 
 
 def main():
@@ -27,28 +81,7 @@ def main():
     for name in ("docs", "skills"):
         shutil.copytree(ROOT / name, folder / name, dirs_exist_ok=True)
     shutil.copy2(ROOT/'pixel_workbench/resources/FEEDBACK_IMAGE_GUIDE.md',folder/'截图反馈给AI.md')
-    notices = folder / "THIRD_PARTY_LICENSES"
-    notices.mkdir(exist_ok=True)
-    included = []
-    components = ["pyinstaller", "mcp", "Pillow", "jsonschema", "pydantic", "pywin32"]
-    # Optional imports may be present in a build environment and collected by
-    # PyInstaller. Their native binaries need their own accompanying notices.
-    for name, pattern in (("cffi", "_cffi_backend*"), ("Brotli", "_brotli*")):
-        if any((folder / "_internal").glob(pattern)):
-            components.append(name)
-    for name in components:
-        dist = distribution(name)
-        number = 0
-        for item in dist.files or []:
-            source = Path(dist.locate_file(item))
-            if source.is_file() and any(word in source.name.lower() for word in ("license", "copying", "notice")):
-                number += 1
-                shutil.copy2(source, notices / f"{name}-{number}-{source.name}")
-        included.append({"name": name, "version": dist.version, "notice_files": number})
-    python_license = Path(sys.base_prefix) / "LICENSE.txt"
-    if python_license.exists():
-        shutil.copy2(python_license, notices / "Python-LICENSE.txt")
-    (notices / "components.json").write_text(json.dumps(included, indent=2), encoding="utf-8")
+    included = collect_notices(folder)
     target = ROOT / "dist" / f"pixel-loom-{__version__}-windows-x64.zip"
     with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as archive:
         for path in sorted(folder.rglob("*")):

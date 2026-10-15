@@ -37,7 +37,7 @@ The two executables share libraries. A dedicated console entry point is necessar
 
 Run `PixelLoomMCP.exe --doctor` to inspect bundled dependency versions. For isolated protocol testing use `--mcp --headless --data-dir <temporary-dir> --workspace <temporary-workspace>`.
 
-The PyInstaller folder above is the intermediate, flat runtime. First collect dependency notices from the matching build environment with `python tools/package_windows.py --folder dist/PixelLoom`. This includes CFFI and Brotli notices when their native binaries are present. Keep the Python/Tk and transitive dependency license files too.
+The PyInstaller folder above is the intermediate, flat runtime. First collect dependency notices from the matching build environment with `python tools/package_windows.py --folder dist/PixelLoom`. The collector reads the frozen import graph, including optional indirect dependencies, and prefers the runtime's own bundled metadata. It includes CFFI and Brotli when their native binaries are present, and fails if a bundled distribution has no license text. Keep the Python/Tk and transitive dependency license files too.
 
 For the downloadable layout documented in the root README, use the verified application folder and the handoff packager:
 
