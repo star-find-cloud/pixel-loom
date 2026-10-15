@@ -130,17 +130,8 @@ async def run(artifacts=None, server_executable=None):
         # The session disappears just before the detached interpreter exits.
         # Windows can still hold its workspace/lock files for a moment; plain
         # rmtree with bounded retries avoids tempfile's recursive error handler.
-        import shutil
-        assert root.resolve().parent == Path(tempfile.gettempdir()).resolve()
-        assert root.name.startswith("pixel-loom-mcp-")
-        deadline = asyncio.get_running_loop().time() + 5
-        while root.exists():
-            try:
-                shutil.rmtree(root)
-            except PermissionError:
-                if asyncio.get_running_loop().time() >= deadline:
-                    raise
-                await asyncio.sleep(.1)
+        from tests import cleanup_runtime
+        await cleanup_runtime(root)
 
 
 if __name__ == "__main__":

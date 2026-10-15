@@ -145,6 +145,8 @@ async def run(artifacts=None, server_executable=None):
                 break
             await asyncio.sleep(.05)
         assert not (home/"runtime/session.json").exists()
+        from tests import cleanup_runtime
+        await cleanup_runtime(root)
 
 
 if __name__ == "__main__":

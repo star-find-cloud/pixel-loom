@@ -82,6 +82,8 @@ async def run(server_executable=None):
             if not session_path.exists():break
             await asyncio.sleep(.05)
         assert not session_path.exists()
+        from tests import cleanup_runtime
+        await cleanup_runtime(root)
 
 
 if __name__=='__main__':asyncio.run(run(Path(sys.argv[1]).resolve() if len(sys.argv)>1 else None))
