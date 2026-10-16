@@ -19,7 +19,6 @@ from .reference import ReferenceSettings
 from .quality import QualitySettings, VisualCheck, WarningResolution
 from .feedback import FeedbackShape
 from .character import CharacterSettings
-from .effects import EffectSettings
 
 server = FastMCP("Pixel Loom", instructions=(
     "Pixel-art/animation editor shared with the human. Start with pixel_onboard. "
@@ -29,6 +28,10 @@ server = FastMCP("Pixel Loom", instructions=(
     "The local editor service is ready by default; no GUI AI tab or activation step is needed. "
     "Keep previous works in pixel_projects. For a DIFFERENT action or variant, call pixel_projects(action='fork', name=...) "
     "before editing, preserving the source project. list/switch/versions/compare expose retained works and saved history. "
+    "Content/style/motion are planned by the connected AI, using general native tools, not built-in content presets. "
+    "Every artwork batch automatically records an editable iteration; use meaningful pixel_edit labels. "
+    "pixel_projects version_preview compares actual earlier/current frames; use_version selects within the same project, "
+    "preserving all earlier iterations and the outgoing current artwork. Read fresh tokens after choosing a version. "
     "Only remove projects at the human's request: remove is reversible, deleted lists removed entries, undelete restores them. "
     "A screenshot marked PIXEL LOOM / PROBLEM FEEDBACK is user problem feedback: read "
     "pixel_help(topic='feedback_images'), verify DOC/REV/FRAME/ROI and ask in chat if the intended fix is unclear. "
@@ -44,8 +47,6 @@ server = FastMCP("Pixel Loom", instructions=(
     "Before final delivery call pixel_review, inspect actual frames/timing/reference images, repair defects with pixel_edit "
     "and recheck. Submit specific conclusions with pixel_review_submit. Numeric checks alone never certify aesthetics. "
     "Final exports require a current passing review; draft=true is only for explicitly unreviewed intermediates. "
-    "pixel_effect generates editable pixel VFX: arc slash, lightning, magic aura, fire and explosion/sparks. Preview real frames/timing first, "
-    "then create an independent saved project with observed tokens; the outgoing project is checkpointed. "
     "Use pixel_character to inspect/capture a reusable approved pose, palette, fixed regions and multi-view references. "
     "Before animation edits inspect that specification and fork the project. pixel_motion_check returns concrete suspect frames "
     "and paged before/current/after evidence; inspect all pages, never blindly erase decorations or declare artistic quality from metrics. "
@@ -95,7 +96,7 @@ def pixel_onboard() -> CallToolResult:
 @server.tool(annotations=READ, structured_output=False)
 @safe
 def pixel_help(topic: str = "overview", operation: str | None = None) -> CallToolResult:
-    """Read focused help: operations/drawing/transform/selection/layers/animation/palette/canvas/library/effects/character/motion.
+    """Read focused help: operations/drawing/transform/selection/layers/animation/palette/canvas/library/character/motion.
 
     Supply operation='polygon' (or another op) for its exact JSON Schema and example. Does not start the editor.
     """
@@ -103,9 +104,6 @@ def pixel_help(topic: str = "overview", operation: str | None = None) -> CallToo
         from .feedback_capture import GUIDE_PATH,FORMAT,PNG_KEY,VISIBLE_MARKER
         return result({"topic":"feedback_images","format":FORMAT,"png_property":PNG_KEY,
                        "visible_marker":VISIBLE_MARKER,"guide":GUIDE_PATH.read_text(encoding="utf-8")})
-    if topic == "effects" and operation is None:
-        return result({"topic": topic, **onboarding()["pixel_effects"],
-                       "example": {"action": "preview", "settings": {"preset": "fire", "size": 64, "frames": 16, "duration_ms": 80}}})
     if topic in ("character", "motion") and operation is None:
         return result({"topic": topic, **onboarding()["character_motion"],
                        "tools": ["pixel_character", "pixel_motion_check"],
@@ -131,7 +129,7 @@ def pixel_workspace() -> CallToolResult:
 
 @server.tool(annotations=EDIT, structured_output=False)
 @safe
-def pixel_projects(action: Literal['list','register','fork','new','switch','versions','restore','compare','remove','deleted','undelete']='list',
+def pixel_projects(action: Literal['list','register','fork','new','switch','versions','restore','version_preview','use_version','compare','remove','deleted','undelete']='list',
                    project_id: str | None=None, project_ids: list[str] | None=None,
                    path: str | None=None, name: str | None=None, version_id: str | None=None,
                    width: int=48, height: int=48, view: Literal['contact','time']='contact',
@@ -142,7 +140,9 @@ def pixel_projects(action: Literal['list','register','fork','new','switch','vers
     list returns ordered numbered projects and stable project ids. register adds an existing .pixloom without switching.
     For a DIFFERENT action/variant use fork(name=...) FIRST: it saves current work and creates an independent copy
     with a new document id and unused path. new creates a blank separate project. switch saves outgoing changes.
-    versions lists pre-save backups; restore opens a version as a NEW project, never overwrites its source.
+    versions lists automatic editable iterations (label/source/time). version_preview compares a selected version with current art,
+    with paged contact or real-time images. use_version chooses an old version WITHIN the active project, preserving current
+    artwork as another version and a shared undo step. restore opens a version as a NEW project. None deletes earlier versions.
     remove accepts project_id or project_ids; it removes shelf entries reversibly, preserving original files and history.
     Removing the active project saves it and opens a remaining project or a clean empty workspace. deleted lists
     removed projects; undelete restores their original ids/numbers. No permanent disk deletion is exposed here.
@@ -153,7 +153,7 @@ def pixel_projects(action: Literal['list','register','fork','new','switch','vers
     """
     payload={key:value for key,value in locals().items() if value is not None}
     client=ensure_editor()
-    if action in ('list','deleted','versions','compare'):
+    if action in ('list','deleted','versions','compare','version_preview'):
         response=client.request('/projects',payload)
     else:
         response=client.mutate('/projects',payload,expected_revision,expected_document_id)
@@ -248,28 +248,6 @@ def pixel_review_submit(review_id: str, visual_checks: list[VisualCheck], method
 def reference_result(data):
     images = [ImageContent(type="image", data=encoded, mimeType="image/png") for encoded in data.pop("images_png", [])]
     return result(data, images)
-
-
-@server.tool(annotations=EDIT, structured_output=False)
-@safe
-def pixel_effect(action: Literal["presets", "preview", "create"] = "presets", settings: EffectSettings | None = None,
-                 name: str | None = None, include_images: bool = True, expected_document_id: str | None = None,
-                 expected_revision: int | None = None) -> CallToolResult:
-    """Generate editable transparent pixel effects; no external image-generation API required.
-
-    presets lists slash/lightning/burst (one-shot, repeated in preview), magic aura and fire (loops). preview returns actual
-    ALL-frame contact image and a draft GIF path without modifying current art/history/playback.
-    Settings: preset, square size 24–128, frames 8–32, duration_ms 30–500, strength 1–100,
-    opaque primary hex color and deterministic seed 0–999999. Missing fields use preset defaults;
-    omit settings entirely to reuse the current effect project's saved original recipe when available.
-    create requires observed document_id/revision; it checkpoints existing work and creates a NEW
-    saved independent .pixloom, with three editable layers, palette, cels and native undo operations.
-    Recipe changes always create a variant, preserving manual corrections in earlier projects.
-    Inspect/play the actual output and use pixel_review before final export; preview GIF is a draft.
-    """
-    return reference_result(ensure_editor().request("/effects", {"action": action, "settings": settings,
-        "name": name, "include_images": include_images, "expected_document_id": expected_document_id,
-        "expected_revision": expected_revision}, timeout=120))
 
 
 @server.tool(annotations=EDIT, structured_output=False)

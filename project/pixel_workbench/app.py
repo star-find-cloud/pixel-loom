@@ -8,7 +8,7 @@ from tkinter import colorchooser, filedialog, messagebox, simpledialog
 from PIL import Image, ImageDraw, ImageTk
 
 from .bridge import Bridge
-from .paths import WORKSPACE as ROOT, RUNTIME, PACKAGE, prepare
+from .paths import WORKSPACE as ROOT, RUNTIME, prepare
 from .service import DocumentService
 from .model import Document, PixelError, hexcolor, integer, rgba, pixels, atomic_json
 
@@ -87,8 +87,6 @@ class Editor(DesktopUI):
                     self.path = Path(candidate)
             except (OSError, ValueError, KeyError):
                 pass
-        elif (PACKAGE / "resources" / "quickstart.pixloom").exists():
-            self.doc = Document.open(PACKAGE / "resources" / "quickstart.pixloom")
         self.saved_revision = self.doc.revision
         self.saved_fingerprint = self.doc.fingerprint()
         self.service = DocumentService(self.doc, mode="desktop")
@@ -1180,10 +1178,9 @@ class Editor(DesktopUI):
             window.dialog.lift()
             return {"ok":True,"presented":True,"playing":window.playing,"review_id":payload["review_id"]},"application/json; charset=utf-8"
         read_only_preview = path in ("/validate", "/reference/preview", "/review/evidence", "/motion/check") or (
-            path == "/effects" and payload.get("action", "presets") in ("presets", "preview")) or (
             path == "/character" and payload.get("action", "status") in ("status", "save")) or (
             path=="/feedback" and payload.get("action") in ("list","inspect")) or (
-            path=='/projects' and payload.get('action','list') in ('list','deleted','versions','compare'))
+            path=='/projects' and payload.get('action','list') in ('list','deleted','versions','compare','version_preview'))
         view_only = path == "/command" and bool(payload.get("ops")) and all(
             op.get("op") in ("select", "selection_set") for op in payload["ops"])
         if method == "POST" and not read_only_preview:
@@ -1196,13 +1193,13 @@ class Editor(DesktopUI):
         self.saved_fingerprint = self.service.saved_fingerprint
         self.dirty = self.service.dirty
         switched=method=='POST' and (path in ('/new','/open','/import','/redraw/begin') or
-                 path in ('/projects', '/effects') and (self.doc.id,self.path)!=previous_identity)
+                 path == '/projects' and ((self.doc.id,self.path)!=previous_identity or payload.get('action')=='use_version'))
         if switched:
             self.gesture=self.override=None
             self.path_points=[]
             self.selection_preview=None
             self.feedback_draft=self.feedback_focus=None
-            if path in ('/projects', '/effects'):
+            if path == '/projects':
                 for name in ('quality_window','reference_window'):
                     window=getattr(self,name,None)
                     if window and window.dialog.winfo_exists():window.dialog.destroy()

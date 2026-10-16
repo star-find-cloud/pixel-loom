@@ -65,7 +65,7 @@ class DocumentService:
                 "project_library": {"count":sum(not entry.get('deleted_at') for entry in self.projects.entries),
                     "deleted_count":sum(bool(entry.get('deleted_at')) for entry in self.projects.entries),
                     "active":self.projects.by_path(self.path) if self.path else None,
-                    "help":"pixel_projects: list/register, fork/new/switch, versions/restore/compare, remove/deleted/undelete"}}
+                    "help":"pixel_projects: list/register, fork/new/switch, versions/version_preview/use_version/restore/compare, remove/deleted/undelete"}}
 
     def resolve(self, value):
         path = Path(value).expanduser()
@@ -83,6 +83,12 @@ class DocumentService:
     def autosave(self):
         self.doc.save(self.runtime / "recovery" / f"{self.doc.id}.pixloom")
         self.doc.save(self.runtime / "autosave.pixloom")
+        entry = self.projects.by_path(self.path) if self.path else None
+        folder = self.projects.history_folder(entry) if entry else self.projects.draft_history(self.doc.id)
+        if not any(folder.glob('*.pixloom')) and self.doc.undo_stack:
+            self.projects.record_iteration(Document.from_dict(self.doc.undo_stack[0]), self.path,
+                                           label='初始版本', source='保存')
+        self.projects.record_iteration(self.doc, self.path)
 
     def remember_path(self):
         atomic_json(self.runtime / "last-project.json", {"path": str(self.path) if self.path else None})
@@ -105,6 +111,7 @@ class DocumentService:
         self.path=target
         self.saved_fingerprint=self.doc.fingerprint()
         self.projects.register(target,self.doc,parent_id)
+        self.projects.record_iteration(self.doc, target)
         self.remember_path()
         return target
 
@@ -140,6 +147,24 @@ class DocumentService:
         if action=='versions':
             return {'ok':True,'project_id':payload.get('project_id'),
                     'versions':self.projects.versions(payload.get('project_id'))}
+        if action=='version_preview':
+            entry = self.projects.get(payload.get('project_id'))
+            doc = Document.open(self.projects.version_path(entry['id'], payload.get('version_id')))
+            page, time_ms = payload.get('page', 0), payload.get('time_ms', 0)
+            view = payload.get('view', 'contact')
+            if type(page) is not int or page < 0 or type(time_ms) is not int or time_ms < 0 or view not in ('contact', 'time'):
+                raise PixelError('Use a nonnegative page/time_ms and contact/time view')
+            current = self.doc if self.path and path_key(entry['path']) == path_key(self.path) else Document.open(entry['path'])
+            pages = max((len(item.durations)+7)//8 for item in (doc, current))
+            if page >= pages:raise PixelError('Version page out of range')
+            images, items = [], []
+            for role, item in [('selected_version', doc), ('current', current)]:
+                frames = list(range(page*8, min(len(item.durations), (page+1)*8))) if view == 'contact' else [frame_at(item, time_ms)]
+                picture = item.contact_sheet(frames, columns=4, scale=max(1,min(4,192//max(item.width,item.height)))) if frames else Image.new('RGBA',(32,32))
+                images.append(encode_png(picture))
+                items.append({'role':role,'frames':frames,'frame_count':len(item.durations),'durations':item.durations})
+            return {'ok':True,'read_only':True,'project_id':entry['id'],'version_id':payload['version_id'],
+                    'page':page,'pages':pages,'view':view,'time_ms':time_ms,'items':items,'images_png':images}
         if action=='compare':
             documents=self.comparison_documents(payload.get('project_ids'))
             page=payload.get('page',0)
@@ -162,6 +187,17 @@ class DocumentService:
             return {'ok':True,'read_only':True,'view':view,'page':page,'pages':pages,'time_ms':time_ms,
                     'projects':items,'images_png':images}
         self.guard(payload)
+        if action=='use_version':
+            entry = self.projects.get(payload.get('project_id'))
+            if not self.path or path_key(self.path) != path_key(entry['path']):
+                raise PixelError('Switch to this project before choosing a version',code='DOCUMENT_CONFLICT')
+            restored = Document.open(self.projects.version_path(entry['id'],payload.get('version_id')))
+            self.checkpoint_current()
+            self.doc.use_version(restored, '选用历史版本 · '+payload['version_id'].split('-')[0],payload.get('source','AI'))
+            self.restore_reference()
+            self.autosave()
+            self.save_project()
+            return {'ok':True,**self.state(),'projects':self.projects.listing(self.path),'history_preserved':True}
         if action in ('remove','undelete'):
             project_ids=payload.get('project_ids') or [payload.get('project_id')]
             if not isinstance(project_ids,list) or not 1<=len(project_ids)<=256 or any(not isinstance(key,str) for key in project_ids):
@@ -382,9 +418,6 @@ class DocumentService:
 
         if path == "/character":
             from .character import action
-            return action(self, payload), JSON_TYPE
-        if path == "/effects":
-            from .effects import action
             return action(self, payload), JSON_TYPE
         if path == "/motion/check":
             if self.view.get("gesture_active"):

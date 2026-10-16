@@ -149,7 +149,6 @@ class Document:
         from .character import summary as character_summary
         return {
             "character": character_summary(self.character),
-            "effect_recipe": copy.deepcopy(self.effect_recipe),
             "document_id": self.id, "name": self.name, "width": self.width,
             "height": self.height, "revision": self.revision,
             "coordinate_system": "Integer pixels, origin top-left; x grows right, y grows down. Rect width/height are sizes.",
@@ -264,11 +263,15 @@ class Document:
             from .character import validate_profile
             doc.character = validate_profile(data["character_profile"], doc.width, doc.height)
         if data.get("effect_recipe") is not None:
-            from .effects import settings as effect_settings
             value = data["effect_recipe"]
             if not isinstance(value, dict) or set(value) != {"format", "settings"} or value["format"] != "pixel-loom/effect/v1" or not isinstance(value["settings"], dict):
                 raise PixelError("Invalid effect recipe")
-            doc.effect_recipe = {"format": value["format"], "settings": effect_settings(value["settings"])}
+            try:
+                if len(json.dumps(value, ensure_ascii=False, allow_nan=False)) > 16_384:
+                    raise ValueError('Legacy metadata too large')
+            except (TypeError, ValueError, RecursionError) as exc:
+                raise PixelError('Invalid legacy effect metadata') from exc
+            doc.effect_recipe = copy.deepcopy(value)  # Inert 0.7.9 metadata; never generates artwork.
         if data.get("quality_policy") is not None or data.get("quality_reviews"):
             from .quality import validate_policy, validate_records
             if data.get("quality_policy") is not None:
@@ -397,6 +400,19 @@ class Document:
         self.last_change = None
         self._event("撤销", "history", 0)
         return True
+
+    def use_version(self, restored, label, source='AI'):
+        """Choose earlier artwork within this project; preserve shared undo and human reports."""
+        restored.id, restored.name = self.id, self.name
+        restored.quality_reviews = []
+        self.undo_stack.append(self.to_dict())
+        self.undo_stack = self.undo_stack[-40:]
+        self.redo_stack.clear()
+        self._adopt(restored)
+        self.revision += 1
+        self.content_serial += 1
+        self.last_change = None
+        self._event(label, source, 0)
 
     def redo(self):
         if not self.redo_stack:

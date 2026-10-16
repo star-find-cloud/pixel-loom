@@ -71,6 +71,18 @@ class ProjectLibrary:
                      frames=len(doc.durations), duration_ms=sum(doc.durations), disk_sha256=file_digest(path))
         entry.pop('deleted_at',None)  # Explicitly opening/adding its file restores the same project identity.
         self.persist()
+        # Edits made before the first Save belong to this project too.
+        pending = self.draft_history(doc.id)
+        if pending.exists():
+            destination = self.history_folder(entry)
+            destination.mkdir(parents=True, exist_ok=True)
+            for item in pending.iterdir():
+                target = destination / item.name
+                if not target.exists():
+                    shutil.copy2(item, target)
+            for item in pending.iterdir():
+                item.unlink()
+            pending.rmdir()
         return entry
 
     def listing(self, active_path=None, deleted=False):
@@ -109,11 +121,52 @@ class ProjectLibrary:
     def history_folder(self, entry):
         return self.runtime / 'project-history' / entry['id']
 
+    def draft_history(self, document_id):
+        key = hashlib.sha256(str(document_id).encode()).hexdigest()
+        return self.runtime / 'iteration-drafts' / key
+
+    def record_iteration(self, doc, path=None, label=None, source=None):
+        """Persist complete editable batches, independently of the 40-step undo stack."""
+        entry = self.by_path(path) if path else None
+        folder = self.history_folder(entry) if entry else self.draft_history(doc.id)
+        folder.mkdir(parents=True, exist_ok=True)
+        previous = sorted(folder.glob('*.pixloom'), reverse=True)
+        if previous:
+            try:
+                info = json.loads(previous[0].with_suffix('.json').read_text(encoding='utf-8'))
+                previous_fingerprint = info['fingerprint']
+            except (OSError, ValueError, KeyError, TypeError):
+                previous_fingerprint = Document.open(previous[0]).fingerprint()
+            if previous_fingerprint == doc.fingerprint():
+                return None  # Reads, view changes, repeated saves and retries are not new iterations.
+        stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
+        target = folder / f'{stamp}-{uuid.uuid4().hex}.pixloom'
+        doc.save(target)
+        event = doc.events[-1] if doc.events else {}
+        atomic_json(target.with_suffix('.json'), {
+            'label': str(label or event.get('label') or '初始版本')[:200],
+            'source': str(source or event.get('source') or '保存')[:80],
+            'saved_at': datetime.now(timezone.utc).isoformat(), 'revision': doc.revision,
+            'width': doc.width, 'height': doc.height, 'frames': len(doc.durations),
+            'duration_ms': sum(doc.durations), 'fingerprint': doc.fingerprint(), 'sha256': file_digest(target)})
+        return target
+
     def versions(self, project_id):
         entry = self.get(project_id)
         folder = self.history_folder(entry)
-        return [{'id': path.stem, 'path': str(path), 'saved_at': path.stem.split('-')[0],
-                 'bytes': path.stat().st_size} for path in sorted(folder.glob('*.pixloom'), reverse=True)]
+        result = []
+        paths = sorted(folder.glob('*.pixloom'))
+        for number, path in enumerate(paths, 1):
+            try:
+                info = json.loads(path.with_suffix('.json').read_text(encoding='utf-8'))
+            except (OSError, ValueError):
+                info = {}
+            if not isinstance(info,dict):info = {}
+            result.append({**info, 'id': path.stem, 'path': str(path), 'number': number,
+                           'saved_at': info.get('saved_at', path.stem.split('-')[0]),
+                           'label': info.get('label', '旧版保存备份'), 'source': info.get('source', '保存'),
+                           'bytes': path.stat().st_size})
+        return result[::-1]
 
     def version_path(self, project_id, version_id):
         candidates = [item for item in self.versions(project_id) if item['id'] == version_id]
@@ -130,6 +183,14 @@ class ProjectLibrary:
         digest = file_digest(path)
         folder = self.history_folder(entry)
         folder.mkdir(parents=True, exist_ok=True)
+        fingerprint = Document.open(path).fingerprint()
+        for metadata in folder.glob('*.json'):
+            try:
+                if (json.loads(metadata.read_text(encoding='utf-8')).get('fingerprint') == fingerprint
+                        and metadata.with_suffix('.pixloom').is_file()):
+                    return None
+            except (OSError, ValueError):
+                continue
         if any(folder.glob(f'*-{digest}.pixloom')):
             return None
         stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')

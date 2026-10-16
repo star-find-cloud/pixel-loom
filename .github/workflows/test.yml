@@ -26,9 +26,6 @@ jobs:
       - run: python -m tests.mcp_feedback_smoke
       - run: python -m tests.mcp_projects_smoke
       - run: python -m tests.mcp_character_smoke
-      - run: python -m tests.mcp_effects_smoke
-      - run: python -m tests.gui_effects_smoke
-        if: runner.os == 'Windows'
       - run: python -m tests.gui_character_smoke
         if: runner.os == 'Windows'
       - run: python -m tests.gui_smoke

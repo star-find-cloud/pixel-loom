@@ -27,6 +27,8 @@ async def run(server_executable=None):
                 assert "action='fork'" in init.instructions
                 sessions.append(session)
             first,second=sessions
+            tools = {item.name for item in (await first.list_tools()).tools}
+            assert 'pixel_effect' not in tools and 'pixel_edit' in tools
             guide=data(await first.call_tool('pixel_onboard',{}))
             state=guide['current_document']
             def tokens(state):return dict(expected_revision=state['revision'],expected_document_id=state['document_id'])
@@ -54,6 +56,23 @@ async def run(server_executable=None):
             assert Path(idle_entry['path']).read_bytes()==idle_bytes
             versions=data(await first.call_tool('pixel_projects',dict(action='versions',project_id=walk_entry['id'])))
             assert versions['versions']
+            oldest = versions['versions'][-1]
+            evidence=await first.call_tool('pixel_projects',dict(action='version_preview',project_id=walk_entry['id'],
+                version_id=oldest['id'],page=1))
+            assert data(evidence)['read_only'] and len([x for x in evidence.content if x.type=='image'])==2
+            state=data(await first.call_tool('pixel_projects',dict(action='switch',project_id=walk_entry['id'],**tokens(switched))))
+            count=len(versions['versions'])
+            chosen=data(await second.call_tool('pixel_projects',dict(action='use_version',project_id=walk_entry['id'],
+                version_id=oldest['id'],**tokens(state))))
+            assert chosen['document_id']==walk_entry['document_id'] and len(chosen['projects'])==2
+            assert chosen['revision']>state['revision'] and chosen['history_preserved']
+            updated=data(await first.call_tool('pixel_projects',dict(action='versions',project_id=walk_entry['id'])))
+            assert len(updated['versions'])>count
+            stale=await first.call_tool('pixel_projects',dict(action='use_version',project_id=walk_entry['id'],
+                version_id=oldest['id'],**tokens(state)))
+            error = stale.structuredContent or json.loads(next(x.text for x in stale.content if x.type=='text'))
+            assert stale.isError and error['code']=='REVISION_CONFLICT'
+            switched=chosen
             restored=data(await first.call_tool('pixel_projects',dict(action='restore',project_id=walk_entry['id'],
                 version_id=versions['versions'][0]['id'],name='Recovered walk',**tokens(switched))))
             assert restored['document_id'] not in (idle_entry['document_id'],walk_entry['document_id'])

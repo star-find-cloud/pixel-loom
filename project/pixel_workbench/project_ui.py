@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import time
+from datetime import datetime
 import tkinter as tk
 from tkinter import ttk
 
@@ -263,44 +264,142 @@ class ComparisonDialog:
 
 
 class HistoryDialog:
-    def __init__(self,editor):
-        self.editor=editor
-        entry=editor.service.projects.by_path(editor.path)
-        self.project_id=entry['id']
-        self.versions=editor.service.projects.versions(self.project_id)
-        self.dialog=d=tk.Toplevel(editor.root)
-        d.title('历史版本 · 恢复为新项目')
+    """One project, automatic editable iterations, independent comparison playback."""
+    def __init__(self, editor):
+        self.editor = editor
+        entry = editor.service.projects.by_path(editor.path)
+        self.project_id = entry['id']
+        self.current = Document.from_dict(editor.doc.to_dict())
+        self.observed = (editor.doc.id, editor.doc.revision)
+        self.versions = editor.service.projects.versions(self.project_id)
+        self.selected = None
+        self.playing, self.job, self.elapsed = False, None, 0
+        self.dialog = d = tk.Toplevel(editor.root)
+        d.title('版本记录 · '+entry['name'])
         d.configure(bg=PANEL)
         d.transient(editor.root)
-        place_dialog(d,editor.root,800,590)
-        editor.label(d,entry['name'],font=('Microsoft YaHei UI',13,'bold')).pack(anchor='w',padx=18,pady=(16,5))
-        editor.label(d,'每次覆盖保存前，旧文件自动备份。恢复会创建独立项目，保留当前作品。',MUTED,SMALL).pack(anchor='w',padx=18,pady=8)
-        self.listing=tk.Listbox(d,bg=BG,fg=FG,selectbackground=FIELD,relief='flat',font=SMALL,height=6)
+        place_dialog(d, editor.root, 940, 680)
+        d.minsize(720, 540)
+        editor.label(d, entry['name'], font=('Microsoft YaHei UI',13,'bold')).pack(anchor='w',padx=18,pady=(16,5))
+        editor.label(d, 'AI 修改自动留档。选一版与当前效果比较，选用后继续编辑；其他版本仍保留。', MUTED, SMALL).pack(anchor='w',padx=18,pady=8)
+        self.listing = tk.Listbox(d,bg=BG,fg=FG,selectbackground=FIELD,relief='flat',font=SMALL,height=5,exportselection=False)
         self.listing.pack(fill='x',padx=18)
         for version in self.versions:
-            self.listing.insert('end',version['id'].split('-')[0]+f"   ·   {version['bytes']//1024} KB")
-        self.preview=tk.Label(d,bg=BG,fg=MUTED,text='还没有旧版本。修改并保存后，会在这里留下上次保存的副本。')
-        self.preview.pack(fill='both',expand=True,padx=18,pady=12)
+            try:stamp = datetime.fromisoformat(version['saved_at']).astimezone().strftime('%m-%d %H:%M:%S')
+            except ValueError:stamp = version['saved_at'][:22]
+            self.listing.insert('end', f"第 {version['number']} 版 · {stamp} · {version['source']} · {version['label'][:70]}")
+        pictures = tk.Frame(d,bg=PANEL)
+        pictures.pack(fill='both',expand=True,padx=18,pady=10)
+        self.views, self.details = [], []
+        for title in ('选中的版本', '当前效果'):
+            column = tk.Frame(pictures,bg=BG)
+            column.pack(side='left',fill='both',expand=True,padx=4)
+            editor.label(column,title,MUTED,SMALL).pack(pady=6)
+            picture = tk.Label(column,bg=BG,fg=MUTED,text='选择一个版本')
+            picture.pack(fill='both',expand=True)
+            detail = editor.label(column,'',MUTED,SMALL)
+            detail.pack(pady=6)
+            self.views.append(picture)
+            self.details.append(detail)
+        self.preview = self.views[0]
+        controls = tk.Frame(d,bg=PANEL)
+        controls.pack(fill='x',padx=18,pady=(0,16))
+        self.play_button = editor.button(controls,'播放对比',self.toggle,font=SMALL)
+        self.play_button.pack(side='left')
+        editor.button(controls,'← 上一帧',lambda:self.step(-1),font=SMALL).pack(side='left',padx=5)
+        editor.button(controls,'下一帧 →',lambda:self.step(1),font=SMALL).pack(side='left')
+        self.use_button = editor.button(controls,'选用这版，继续修改',self.use,True,font=SMALL)
+        self.use_button.pack(side='right')
+        editor.button(controls,'刷新',self.reload,font=SMALL).pack(side='right',padx=6)
         self.listing.bind('<<ListboxSelect>>',self.show)
-        editor.button(d,'恢复为新项目',self.restore,True,font=SMALL).pack(side='right',padx=18,pady=(0,16))
+        d.bind('<Destroy>',self.cleanup,add='+')
         if self.versions:
             self.listing.selection_set(0)
             self.show()
 
+    def stop(self):
+        self.playing = False
+        if self.job:self.dialog.after_cancel(self.job)
+        self.job = None
+        self.play_button.config(text='播放对比')
+
     def show(self,event=None):
-        selected=self.listing.curselection()
+        self.stop()
+        selected = self.listing.curselection()
         if not selected:return
         try:
-            doc=Document.open(self.versions[selected[0]]['path'])
-            image=doc.preview(scale=max(1,min(5,260//max(doc.width,doc.height))))
-            self.photo=ImageTk.PhotoImage(image)
-            self.preview.config(image=self.photo,text='')
-        except (OSError,ValueError) as exc:self.preview.config(image='',text=str(exc))
+            self.selected = Document.open(self.versions[selected[0]]['path'])
+            self.elapsed = 0
+            self.use_button.config(state='disabled' if self.selected.fingerprint()==self.current.fingerprint() else 'normal')
+            self.render()
+        except (OSError,ValueError) as exc:
+            self.selected = None
+            self.preview.config(image='',text=str(exc))
+            self.use_button.config(state='disabled')
+
+    def render(self):
+        if self.selected is None:return
+        self.photos = []
+        for index, doc in enumerate((self.selected,self.current)):
+            frame = frame_at(doc,self.elapsed)
+            image = doc.preview(frame=frame,scale=max(1,min(6,280//max(doc.width,doc.height))))
+            if max(image.size)>280:
+                ratio = 280/max(image.size)
+                image = image.resize((max(1,round(image.width*ratio)),max(1,round(image.height*ratio))),Image.Resampling.NEAREST)
+            photo = ImageTk.PhotoImage(image)
+            self.photos.append(photo)
+            self.views[index].config(image=photo,text='')
+            self.details[index].config(text=f'{doc.width}×{doc.height} · 第 {frame+1}/{len(doc.durations)} 帧 · {doc.durations[frame]}ms')
+
+    def toggle(self):
+        if self.playing:self.stop();return
+        if self.selected is None:return
+        self.playing = True
+        self.play_button.config(text='暂停对比')
+        self.started = time.monotonic()-self.elapsed/1000
+        self.tick()
+
+    def tick(self):
+        self.job = None
+        if not self.playing:return
+        self.elapsed = int((time.monotonic()-self.started)*1000)
+        self.render()
+        self.job = self.dialog.after(16,self.tick)
+
+    def step(self,delta):
+        self.stop()
+        if self.selected is None:return
+        target = (frame_at(self.selected,self.elapsed)+delta)%len(self.selected.durations)
+        self.elapsed = sum(self.selected.durations[:target])
+        self.render()
+
+    def reload(self):
+        self.dialog.destroy()
+        return self.editor.project_history_dialog()
+
+    def use(self):
+        from tkinter import messagebox
+        self.stop()
+        selected = self.listing.curselection()
+        if not selected:return
+        if (self.editor.doc.id,self.editor.doc.revision)!=self.observed:
+            messagebox.showinfo('工程已更新','当前作品在预览后有改动，请刷新版本记录，再选择。',parent=self.dialog)
+            return
+        version = self.versions[selected[0]]
+        if self.editor.project_action('use_version',project_id=self.project_id,version_id=version['id']):
+            self.dialog.destroy()
+            return self.editor.project_history_dialog()
 
     def restore(self):
-        selected=self.listing.curselection()
+        selected = self.listing.curselection()
         if not selected:return
-        version=self.versions[selected[0]]
-        name=self.editor.service.projects.get(self.project_id,include_deleted=True)['name']+' · 恢复版本'
+        version = self.versions[selected[0]]
+        name = self.editor.service.projects.get(self.project_id,include_deleted=True)['name']+' · 恢复版本'
         if self.editor.project_action('restore',project_id=self.project_id,version_id=version['id'],name=name):
             self.dialog.destroy()
+
+    def cleanup(self,event):
+        if event.widget is self.dialog:
+            self.playing = False
+            if self.job:self.dialog.after_cancel(self.job)
+            self.job = None

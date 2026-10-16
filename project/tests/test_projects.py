@@ -58,8 +58,8 @@ class ProjectTests(unittest.TestCase):
         self.service.save_project()
         current=Path(self.service.path).read_bytes()
         versions=self.call('versions',project_id=original['id'])['versions']
-        self.assertEqual(len(versions),1)
-        self.call('restore',project_id=original['id'],version_id=versions[0]['id'],name='Restored idle')
+        self.assertEqual(len(versions),2)
+        self.call('restore',project_id=original['id'],version_id=versions[-1]['id'],name='Restored idle')
         self.assertNotEqual(self.service.path,Path(original['path']))
         self.assertEqual(Path(original['path']).read_bytes(),current)
         self.assertEqual(self.service.doc.composite().getpixel((2,3))[3],0)

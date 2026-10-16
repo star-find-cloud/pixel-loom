@@ -2,9 +2,9 @@
 
 [中文](README.md) · [Agent guide](docs/AI_GUIDE.md) · [Release preparation](docs/RELEASE.md)
 
-An editable local pixel-art and frame-animation workbench for humans and AI agents. A native desktop window and standard MCP clients share layers, cels, palette, named regions and undo history.
+An AI-facing pixel-art tool with documented general drawing/animation operations and a visual editor for humans to inspect results, create artwork, fix small defects and import/save/export. Standard MCP clients and the desktop share editable layers, cels, palette, named regions, project iterations and undo history. Content is planned by the user's own AI.
 
-Version **0.7.9 is a public preview**. Desktop behavior is tested on Windows. A headless backend and cross-platform CI configuration are included; other desktop platforms have not been fully validated.
+Version **0.7.10 is a public preview**. Desktop behavior is tested on Windows. A headless backend and cross-platform CI configuration are included; other desktop platforms have not been fully validated.
 
 This is the `project/` source subproject. The complete handoff starts with the parent `README.md`; development commands here run in this directory, next to `pyproject.toml`. Formal tests remain in `tests/`; generated test projects, logs and build caches are excluded.
 
@@ -123,10 +123,15 @@ Timeline playback speed: choose 0.25×–4× next to Play. Changes take effect w
 
 The desktop opens a short usage guide. Enter, Escape and closing the dialog all allow normal use. The optional support page offers CNY 5/10/15/20 and shows the matching original WeChat receipt image supplied by the maintainer. It never sends a payment request, checks payment status or gates features. Reopen it from More. Headless MCP is unchanged. Receipt images and their amount mapping live in `pixel_workbench/resources/support/`.
 
-## Editable pixel effects (0.7.9)
+## Automatic project iterations (0.7.10)
 
-**More → Pixel effects** provides arc slash, lightning, magic aura, fire and explosion/sparks in one visual dialog. Adjust the primary color, strength, size, frame count and frame interval, play the preview or inspect every frame, then Generate new project. The main canvas gains no permanent panel. Existing work is checkpointed and each result is a separate saved project, with three ordinary editable layers, its palette, native frame cels, action tag and original generation recipe. Regeneration creates a variant and preserves manual edits in earlier projects. Advanced character/motion tools remain searchable through Ctrl+K.
+The application exposes general pixel/layer/frame/inspection tools. The connected AI decides the content, style and motion; there are no built-in creative presets or automatically loaded example projects. Small API examples in help are optional documentation.
 
-MCP uses `pixel_effect(action="presets")`, then `preview(settings={"preset":"fire","size":64,"frames":16,"duration_ms":80})`. Inspect the actual all-frame contact image and local draft GIF before `create` with observed document/revision tokens. Preview does not change artwork, history, selection or playback. Settings are `preset` (`slash`, `lightning`, `magic`, `fire`, `burst`), `size` 24–128, `frames` 8–32, `duration_ms` 30–500, `strength` 1–100, opaque primary hex `color`, and deterministic `seed` 0–999999. An explicit partial settings object uses preset defaults; omit settings entirely to reuse the current project's saved original recipe when present. `pixel_help(topic="effects")` and onboarding describe the same workflow.
+Each successful AI artwork batch is automatically saved as a complete editable iteration, with its `pixel_edit` label, source and time. Use short descriptive labels for coherent batches. Read-only previews, validation, frame selection, exact retries and repeated saves do not add versions. Unsaved draft iterations join the project on its first save. Manual changes are captured by the desktop's existing 500ms autosave; they may be grouped together. Records remain in the local user-data directory across restarts, independently of the 40-step undo stack; copying a single `.pixloom` does not copy this local history. History is not pruned automatically and consumes disk space.
 
-Effects are parameterized native pixel operations, not a language model or an external image-generation API. Crisp edges use binary alpha; layers and every frame can be hand-edited or changed through pixel_edit, with shared undo. Fire and magic aura are designed as loops. Burst, lightning and slash are single actions repeatedly played in previews; configure one-shot playback in the consuming game engine. Recipe settings retain their original generation size after manual resizing and never silently rerender painted changes. Use the existing pixel_review visual/timing workflow and save before final PNG/sheet+JSON/GIF export. Preview GIFs are explicitly drafts and do not constitute artistic approval.
+- `pixel_projects(action="versions", project_id=...)`: newest-first iterations with stable ids, number, label, source and timestamp.
+- `version_preview(project_id=..., version_id=..., view="contact", page=0)`: actual selected/current images and timing; fetch all pages. `view="time", time_ms=...` compares actual elapsed time, including unsaved current art. This is read-only.
+- `use_version(project_id=..., version_id=..., expected_document_id=..., expected_revision=...)`: select within the active project, retaining its identity/path and current artwork as a version plus a shared undo step. Switch to the project first; re-read tokens after choosing. Existing acceptance reviews are cleared. No iteration is deleted.
+- `restore` remains available to create a separate project from an old version.
+
+Desktop: **项目 → 版本记录**. Select a version, play both snapshots or step through frames, then choose it to continue editing. If the current artwork changed while the browser was open, refresh before choosing. Older 0.7.9 projects retain all cels/layers/timing and inert legacy metadata when opened and saved; no generator is executed.

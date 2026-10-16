@@ -1,16 +1,14 @@
 # Pixel Loom · 像素织机
 
-**0.7.9 公开测试版 · Windows 便携版 · 使用者和 AI 的统一入口**
+**0.7.10 公开测试版 · Windows 便携版 · 使用者和 AI 的统一入口**
 
-[下载 Windows 0.7.9 便携版](https://github.com/yangsir2077/pixel-loom/releases/download/v0.7.9/pixel-loom-0.7.9-windows-x64.zip) · [版本说明与校验值](https://github.com/yangsir2077/pixel-loom/releases/tag/v0.7.9) · [反馈问题](https://github.com/yangsir2077/pixel-loom/issues)
+[下载 Windows 0.7.10 便携版](https://github.com/yangsir2077/pixel-loom/releases/download/v0.7.10/pixel-loom-0.7.10-windows-x64.zip) · [版本说明与校验值](https://github.com/yangsir2077/pixel-loom/releases/tag/v0.7.10) · [反馈问题](https://github.com/yangsir2077/pixel-loom/issues)
 
-这是一个人和 AI 共用画布、图层、动画与撤销记录的本地像素编辑器。普通使用不需要打开源码或测试文件，也不需要单独安装 Python。
+这是一个面向 AI 的像素创作工具，也是供用户查看、创作和修改作品的可视化编辑器。AI 通过 MCP 和配套说明使用通用绘图与动画工具；用户直观看结果、手动修细节，并使用导入、保存和导出等基础功能。普通使用不需要打开源码或测试文件，也不需要单独安装 Python。
 
-0.7.9 新增 **更多 → 像素特效**：选择弧形斩击、闪电电弧、魔法光环、循环火焰或爆炸火花，调整颜色、强度、画布尺寸、帧数和速度，即时预览后生成独立的可编辑项目。焰体／亮芯／火星等分别保存在普通图层，生成后仍能手动画每一帧；支持原有 PNG、精灵表和 GIF 导出。
+0.7.10 专注通用绘图、图层、动画编辑、检查与 MCP 工具。内容、风格和动作由使用者自己的 AI 决定；不提供写死的特效生成器，不自动载入示例作品。0.7.9 工程仍能完整打开和编辑。
 
-AI 调用 `pixel_effect` 可列出预设、查看实际全部帧与动态预览，再生成新项目。生成会先保存当前作品，各种效果或参数变化互相独立。参数化特效不调用外部生图服务。角色规范与动作检查保留在 Ctrl+K 命令搜索中，按需使用。
-
-历史版本独立保留：[0.7.7](https://github.com/yangsir2077/pixel-loom/releases/tag/v0.7.7) · [0.7.6](https://github.com/yangsir2077/pixel-loom/releases/tag/v0.7.6)。0.7.8 是内部预览，相关功能已包含在 0.7.9，没有单独发布。
+**项目 → 版本记录** 自动保留 AI 的每批修改。查看时间、说明和来源，并排播放或逐帧比较，选用喜欢的一版继续编辑；当前版和其他迭代都会保留，不必新建一堆项目。旧的软件发布将撤下，作品版本不会被删除。
 
 ## 1. 先打开应用
 
@@ -51,7 +49,8 @@ LICENSE               开源许可证
 3. 新作品用 `pixel_projects(action="new")`；已有作品的新动作或变体先 `fork`。先保存当前作品，不能把待机覆盖成行走。修用户指出的问题时继续对应项目，不擅自删除或替换其他作品。
 4. 用 `pixel_help(operation="polygon")` 等查询准确参数；不确定的批次先 `pixel_validate`，再 `pixel_edit`。每次写入带上最近实际读取的 `expected_document_id` 和 `expected_revision`。冲突后先重读。
 5. 完成一个部分就看 `pixel_preview`；动画用 `pixel_contact_sheet` 检查所有帧、连接处、地面接触、残影、时长和首尾循环。没有实际看过的图或播放不能宣称看过。
-6. 成品按第 5 节自检，保存可编辑工程，再导出并报告实际路径。
+6. 用有意义的 `pixel_edit(label=...)` 描述每轮修改；版本自动记录。通过 `pixel_projects(action="versions")` 列表和 `version_preview` 查看全部帧后，用 `use_version` 在同一项目中选用旧版（带当前观察到的令牌），或用 `restore` 另建项目。
+7. 成品按第 5 节自检，保存可编辑工程，再导出并报告实际路径。
 
 ### 绘画和转换规则
 

@@ -16,6 +16,7 @@ def main():
         root=tk.Tk()
         root.withdraw()
         editor=Editor(root)
+        assert editor.path is None and all(not cel.getbbox() for layer in editor.doc.layers for cel in layer.cels)
         errors=[]
         root.report_callback_exception=lambda *args:errors.append(str(args[1]))
         try:
@@ -44,6 +45,22 @@ def main():
             history=editor.project_history_dialog()
             root.update()
             assert history.versions
+            history.listing.selection_clear(0,'end')
+            history.listing.selection_set(len(history.versions)-1)
+            history.show()
+            history.toggle()
+            root.update()
+            assert history.playing and history.job
+            history.step(1)
+            assert not history.playing
+            source=editor.path
+            active_id=editor.doc.id
+            selected=history.use()
+            assert editor.path==source and editor.doc.id==active_id
+            assert len(editor.service.projects.entries)==2
+            assert selected and selected.versions
+            selected.dialog.destroy()
+            history=editor.project_history_dialog()
             history.listing.selection_clear(0,'end')
             history.listing.selection_set(0)
             source=editor.path

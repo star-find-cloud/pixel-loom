@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.10 — 2026-10-16: general AI tools and project iterations
+
+- Remove the built-in pixel-effect generator, its menu/MCP tool and auto-loaded example artwork. The connected AI creates content using general drawing, layer, frame, preview and export tools.
+- Automatically retain editable AI batches and pre-save drafts with labels, source and time. View both animations, step through frames and choose an old version within the same project; preserve every earlier iteration and shared undo.
+- Add versions/version_preview/use_version to the existing project MCP interface; guard stale choices and preserve old-project pixels/layers/timing and inert metadata.
+- At the owner's request, withdraw previous GitHub release pages/assets and their version tags after this replacement is publicly verified. Source commit history and user artwork remain intact.
+- Add persistence, deduplication, two-client MCP and desktop comparison/selection regression coverage.
+
 ## 0.7.9 — 2026-10-16: editable pixel VFX
 
 - Add one visual Pixel effects entry with arc slash, lightning, magic aura, fire and explosion/sparks. Color, strength, size, frame count and timing update a background-built preview and optional all-frame overview.
