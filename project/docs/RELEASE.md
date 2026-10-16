@@ -8,6 +8,7 @@ python -m unittest discover -s tests -v
 python -m tests.mcp_public_smoke
 python -m tests.mcp_creation_smoke
 python -m tests.mcp_reference_smoke
+python -m tests.mcp_cutout_smoke
 python -m tests.mcp_quality_smoke
 python -m tests.mcp_feedback_smoke
 python -m tests.mcp_projects_smoke
@@ -15,6 +16,7 @@ python -m tests.mcp_storage_smoke
 python -m tests.mcp_character_smoke
 python -m tests.gui_smoke
 python -m tests.gui_editing_smoke
+python -m tests.gui_cutout_smoke
 python -m tests.gui_updates_smoke
 python -m tests.gui_welcome_smoke
 python -m tests.gui_feedback_smoke

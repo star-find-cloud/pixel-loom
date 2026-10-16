@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+from copy import deepcopy
 from collections import OrderedDict
 import hashlib
 import io
@@ -43,6 +44,8 @@ class DocumentService:
         for path in (self.workspace / "projects", self.workspace / "exports", self.runtime / "recovery"):
             path.mkdir(parents=True, exist_ok=True)
         self.references = ReferenceWorkspace(self.runtime / "reference-workspace.json")
+        from .cutout import CutoutManager
+        self.cutouts = CutoutManager()
         self.quality = QualityManager(self.runtime)
         from .motion import MotionManager
         self.motion = MotionManager()
@@ -60,9 +63,11 @@ class DocumentService:
         return self.doc.fingerprint() != self.saved_fingerprint
 
     def state(self):
+        reference = self.references.summary(self.doc)
+        reference["cutout"].update(self.cutouts.status(self.doc.id, self.references.context))
         return {**self.doc.state(), "app_version": __version__, "project_path": str(self.path) if self.path else None,
                 "unsaved_changes": self.dirty, "editor": {"mode": self.mode, **self.view},
-                "workspace": str(self.workspace), "reference_workflow": self.references.summary(self.doc),
+                "workspace": str(self.workspace), "reference_workflow": reference,
                 "quality_review": self.quality.summary(self.doc), "feedback": feedback_summary(self.doc),
                 "project_library": {"count":sum(not entry.get('deleted_at') for entry in self.projects.entries),
                     "deleted_count":sum(bool(entry.get('deleted_at')) for entry in self.projects.entries),
@@ -296,6 +301,7 @@ class DocumentService:
             raise PixelError("Unknown reference view")
         data = {"ok": True, **self.references.summary(self.doc), "document_id": self.doc.id,
                 "revision": self.doc.revision, "image_roles": []}
+        data["cutout"].update(self.cutouts.status(self.doc.id, self.references.context))
         images = []
         context = self.references.context
         def add(role, image):
@@ -303,6 +309,9 @@ class DocumentService:
             data["image_roles"].append(role)
         if view in ("subject", "comparison") and context["subject"]:
             add("subject_reference", decoded_asset(context["subject"]["png"]))
+            if context.get("cutout") is not None:
+                from .cutout import cutout_subject
+                add("applied_cutout_reference", cutout_subject(context["subject"], context["cutout"]))
         if view in ("draft", "comparison") and context["subject"]:
             draft, palette = make_draft(context)
             scale = max(1, min(8, 512//max(draft.size)))
@@ -341,6 +350,97 @@ class DocumentService:
         if update_project:
             self.doc.apply([{"op": "reference_context", "data": context}], "调整参考图重绘设置", source=payload.get("source", "AI"))
             self.autosave()
+        return self.reference_view("comparison" if payload.get("include_images", True) else "status")
+
+    def cutout_action(self, payload, preview=False):
+        self.guard(payload)
+        self.references.guard(payload.get("expected_reference_revision"))
+        context = self.references.context
+        asset = context["subject"]
+        if not asset:
+            raise PixelError("先导入普通图片，再去背景", code="REFERENCE_REQUIRED")
+        self.cutouts.sync(self.doc.id, context)
+        if preview:
+            base_settings = context.get("cutout") or {}
+            if payload.get("base_preview_id"):
+                base_settings = self.cutouts.ticket(payload["base_preview_id"], self.doc.id, self.doc.revision,
+                                                    self.references.revision, asset["id"])["settings"]
+            changes = payload.get("settings")
+            if changes is not None and not isinstance(changes, dict):
+                raise PixelError("Cutout settings must be an object")
+            settings = {**base_settings, **(changes or {})}
+            ticket_id, ticket = self.cutouts.preview(self.doc.id, self.doc.revision, self.references.revision,
+                                                    asset, settings)
+            result = {"ok": True, "dry_run": True, "preview_id": ticket_id, "expires_in_seconds": 300,
+                      "document_id": self.doc.id, "revision": self.doc.revision,
+                      "reference_revision": self.references.revision, "size": asset["size"],
+                      "settings": ticket["settings"], "statistics": ticket["stats"],
+                      "image_roles": [], "images_png": []}
+            if payload.get("include_images", True):
+                from .reference_ui_images import checker
+                result["image_roles"] = ["original_reference", "cutout_on_checker", "removed_alpha_mask"]
+                result["images_png"] = [encode_png(checker(decoded_asset(asset["png"]))),
+                                        encode_png(checker(ticket["output"])), encode_png(ticket["mask"].convert("RGBA"))]
+            return result
+        action = payload.get("action", "apply")
+        if action == "export":
+            if context.get("cutout") is None:
+                raise PixelError("先应用抠图预览，再导出透明 PNG")
+            from .cutout import cutout_subject
+            if not payload.get("path"):
+                raise PixelError("Cutout export needs a local PNG path")
+            target = self.resolve(payload["path"])
+            if target.suffix.lower() != ".png":
+                raise PixelError("Cutout export needs a .png filename")
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if not isinstance(payload.get("overwrite", False), bool):
+                raise PixelError("overwrite must be boolean")
+            # Exclusive creation avoids silently replacing an original or another export.
+            try:
+                with target.open("wb" if payload.get("overwrite", False) else "xb") as output:
+                    cutout_subject(asset, context["cutout"]).save(output, "PNG")
+            except FileExistsError as exc:
+                raise PixelError("目标文件已存在，请换一个名称或明确允许覆盖", code="FILE_EXISTS") from exc
+            return {"ok": True, "path": str(target), "size": asset["size"], "original_preserved": True,
+                    "document_id": self.doc.id, "revision": self.doc.revision, "reference_revision": self.references.revision,
+                    "delivery_status": "processed_reference_not_artwork_review"}
+        before = deepcopy(context.get("cutout"))
+        if action == "apply":
+            ticket = self.cutouts.ticket(payload.get("preview_id"), self.doc.id, self.doc.revision,
+                                         self.references.revision, asset["id"])
+            after = deepcopy(ticket["settings"])
+        elif action == "reset":
+            after = None
+        elif action == "undo":
+            if not self.cutouts.undo:
+                raise PixelError("没有可撤销的抠图调整")
+            after = deepcopy(self.cutouts.undo[-1][0])
+        elif action == "redo":
+            if not self.cutouts.redo:
+                raise PixelError("没有可重做的抠图调整")
+            after = deepcopy(self.cutouts.redo[-1][1])
+        else:
+            raise PixelError("Unknown cutout action")
+        if before != after:
+            proposed = deepcopy(context)
+            if after is None:
+                proposed.pop("cutout", None)
+            else:
+                proposed["cutout"] = after
+            bound = self.references.summary(self.doc)["current_project_has_same_subject"]
+            self.references.commit(proposed)
+            if bound:
+                labels = {"apply": "应用参考图抠图", "reset": "恢复原图背景", "undo": "撤销抠图调整", "redo": "重做抠图调整"}
+                self.doc.apply([{"op": "reference_context", "data": proposed}], labels[action], source=payload.get("source", "AI"))
+                self.autosave()
+            if action == "undo":
+                self.cutouts.redo.append(self.cutouts.undo.pop())
+            elif action == "redo":
+                self.cutouts.undo.append(self.cutouts.redo.pop())
+            else:
+                self.cutouts.undo.append((before, after))
+                self.cutouts.undo = self.cutouts.undo[-20:]
+                self.cutouts.redo.clear()
         return self.reference_view("comparison" if payload.get("include_images", True) else "status")
 
     def workspace_info(self):
@@ -478,6 +578,10 @@ class DocumentService:
             return {"ok":True,**self.state(),"review":record},JSON_TYPE
         if path == "/reference/setup":
             return self.reference_setup(payload), JSON_TYPE
+        if path == "/reference/cutout/preview":
+            return self.cutout_action(payload, preview=True), JSON_TYPE
+        if path == "/reference/cutout":
+            return self.cutout_action(payload), JSON_TYPE
         if path == "/reference/preview":
             self.guard(payload)
             self.references.guard(payload.get("expected_reference_revision"))

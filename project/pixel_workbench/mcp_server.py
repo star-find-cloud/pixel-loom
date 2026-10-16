@@ -17,6 +17,7 @@ from .creation_guidance import TOPICS as CREATION_TOPICS, workflow_help, workflo
 from .lifecycle import ensure_editor
 from .operations import EditOperation, full_schema, guide
 from .reference import ReferenceSettings
+from .cutout import CutoutSettings, HELP as CUTOUT_HELP
 from .quality import QualitySettings, VisualCheck, WarningResolution
 from .feedback import FeedbackShape
 from .character import CharacterSettings
@@ -27,6 +28,8 @@ server = FastMCP("Pixel Loom", instructions=(
     "Before making artwork read pixel_help(topic='workflow'); animation_workflow explains clean moving layers, "
     "and inspection_workflow explains actual image inspection, repairs and honest delivery. "
     "These guides are bundled and readable through MCP; no extra document from the human is required. "
+    "Optional background removal: pixel_help(topic='cutout'), pixel_cutout_preview, pixel_cutout. "
+    "Only use it when requested or clearly needed for an isolated transparent source; never automatically on import/conversion. "
     "Native polygon/bezier/region tools let you draw directly without external pixel-generation scripts. "
     "Read current state, preserve artwork, use observed document/revision tokens and inspect real previews after coherent batches. "
     "pixel_help exposes exact operation schemas/examples; resources and prompts provide runnable recipes. "
@@ -118,6 +121,8 @@ def pixel_help(topic: str = "overview", operation: str | None = None) -> CallToo
     """
     if topic in CREATION_TOPICS and operation is None:
         return result(workflow_help(topic))
+    if topic == 'cutout' and operation is None:
+        return result(CUTOUT_HELP)
     if topic=='cleanup' and operation is None:return result(CLEANUP_HELP)
     if topic=="feedback_images" and operation is None:
         from .feedback_capture import GUIDE_PATH,FORMAT,PNG_KEY,VISIBLE_MARKER
@@ -131,7 +136,7 @@ def pixel_help(topic: str = "overview", operation: str | None = None) -> CallToo
                        "report_paging": "pixel_motion_check() -> report_id/pages; call again with report_id and every remaining page (zero-based)."})
     data = guide(topic, operation)
     if "topics" in data:
-        data["topics"] += list(CREATION_TOPICS)
+        data["topics"] += [*CREATION_TOPICS, "cutout"]
         data["creation_workflow"] = onboarding()["creation_workflow"]
     return result(data)
 
@@ -400,6 +405,47 @@ def pixel_reference_setup(action: Literal["load", "configure", "clear", "use_pro
         "settings": settings, "expected_reference_revision": expected_reference_revision,
         "expected_revision": expected_revision, "expected_document_id": expected_document_id})
     return reference_result(data)
+
+
+@server.tool(annotations=EDIT, structured_output=False)
+@safe
+def pixel_cutout(action: Literal["apply", "reset", "undo", "redo", "export"],
+                 expected_reference_revision: int, expected_revision: int, expected_document_id: str,
+                 preview_id: str | None = None, path: str | None = None, overwrite: bool = False) -> CallToolResult:
+    """Apply an inspected background-removal preview, undo/redo cutout only, reset to original, or export reference PNG.
+
+    OPTIONAL: use only when requested or clearly needed for an isolated transparent source, never automatically on import.
+    Start with pixel_cutout_preview and inspect all images. apply needs its preview_id and current three tokens.
+    Original source is preserved. This changes reference processing, never already-painted canvas pixels.
+    Undo/redo specifically reverts cutout settings, preserving other reference settings and unrelated drawing.
+    Reset removes all applied cutout settings. Export uses stored reference resolution (at most 1024px),
+    not original full-size or the pixel canvas; existing files require overwrite=true. Read pixel_help(topic='cutout').
+    """
+    return reference_result(ensure_editor().request('/reference/cutout', {
+        'action': action, 'preview_id': preview_id, 'path': path, 'overwrite': overwrite,
+        'expected_reference_revision': expected_reference_revision, 'expected_revision': expected_revision,
+        'expected_document_id': expected_document_id}))
+
+
+@server.tool(annotations=READ, structured_output=False)
+@safe
+def pixel_cutout_preview(expected_reference_revision: int, expected_revision: int, expected_document_id: str,
+                         settings: CutoutSettings | None = None, base_preview_id: str | None = None) -> CallToolResult:
+    """Read-only local background-removal preview: original, result on checker, removed-alpha mask, statistics and preview_id.
+
+    OPTIONAL, not an automatic import/conversion step. Use when requested or clearly needed for a transparent source.
+    Import subject using pixel_reference_setup first. Read pixel_help(topic='cutout') for limits and exact settings.
+    settings patches applied settings, or base_preview_id's settings. Pass that id to retain protection when adjusting.
+    Defaults sample dominant border color and remove connected similar background. tolerance=0..120; softness=0..40.
+    points samples up to 16 background seeds (also reaches enclosed gaps); protect_regions are [x,y,width,height].
+    keep_polygons/remove_polygons give precise masks; keep wins. Coordinates use STORED reference size, not canvas.
+    connected=false removes matching colors throughout the image and can erase similarly colored clothing.
+    Every preview starts from original pixels. It never edits the reference, artwork or history. No semantic model:
+    hair, glass, shadows and busy backgrounds need masks/manual protection. Apply only after inspecting the images.
+    """
+    return reference_result(ensure_editor().request('/reference/cutout/preview', {
+        'settings': settings, 'base_preview_id': base_preview_id, 'expected_reference_revision': expected_reference_revision,
+        'expected_revision': expected_revision, 'expected_document_id': expected_document_id}, timeout=120))
 
 
 @server.tool(annotations=EDIT, structured_output=False)

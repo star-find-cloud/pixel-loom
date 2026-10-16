@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.13 — 2026-10-17: optional background removal
+
+- Add one background-removal entry in the reference importer with original/result comparison, background seed clicks, strength adjustment, optional soft edges, protected rectangles, mask view and explicit application.
+- Preserve original files/references and painted artwork. Recompute previews from original pixels; support cutout-only undo/redo/reset, transparent source PNG export, portable parameters in saved drafts and regular undo for bound references. Importing/converting alone never applies cutout.
+- Add discoverable MCP help, read-only pixel_cutout_preview and guarded pixel_cutout apply/undo/redo/reset/export. base_preview_id retains masks while adjusting parameters; stale or expired previews cannot apply. Guidance covers optional use, image inspection, settings/coordinates, repairs and honest limits.
+- Use a local color/connected-mask method, with explicit keep/remove polygons for AI precision. No semantic segmentation model or content presets are bundled; complex scenes/hair/glass may require manual masks. Stored reference resolution remains bounded to1024px and animated inputs use the first frame.
+- Add isolated algorithm/history/portability, two-client MCP and Tk control regression tests.
+- Block exports while adjusted previews are pending or unapplied; refresh expired cutout previews before the user explicitly applies again.
+
 ## 0.7.12 — 2026-10-17: bundled MCP creation and inspection methods
 
 - Guide newly connected clients from initialization and onboarding to task-independent design, native drawing, layer/motion planning, optional host-side computation and real visual inspection.

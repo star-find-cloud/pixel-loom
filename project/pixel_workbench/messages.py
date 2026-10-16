@@ -8,6 +8,8 @@ def user_error(error):
         "REVISION_CONFLICT": "作品刚刚被更新，请查看当前画面后重试。",
         "DOCUMENT_CONFLICT": "当前工程已切换，请在目标工程中重新操作。",
         "REFERENCE_CONFLICT": "参考图或参数已更新，请刷新参考窗口后重试。",
+        "CUTOUT_PREVIEW_STALE": "原图、参数或工程已变化，请重新预览去背景效果后再应用。",
+        "CUTOUT_PREVIEW_REQUIRED": "去背景预览已过期，请重新预览、检查后再应用。",
         "EDITOR_BUSY": "请先完成当前笔画或路径，再执行此操作。",
         "LAYER_LOCKED": "当前图层已锁定，请先解锁或选择其他图层。",
         "FILE_EXISTS": "目标文件已存在，请换一个文件名，或确认覆盖。",

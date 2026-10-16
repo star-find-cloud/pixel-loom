@@ -152,9 +152,19 @@ Style references are optional imports, never a built-in fixed image. Status expo
 
 5. Save .pixloom and export transparent PNG. Source/style images and settings embed in the project; re-opening it restores the reference workspace without original files. Bound parameter changes are undoable metadata edits and do not silently alter painted pixels. Loading another subject prepares a different job without retargeting the existing project's reference. `action="use_project"` restores embedded project references.
 
-`REFERENCE_CONFLICT` means reference settings changed; read `pixel_reference` and revise the plan. Existing document/revision/lock/stroke protections also apply. GUI reference overlays never affect MCP pixels or exports. The automatic draft supports resampling, palette reduction and tone adjustment; it does not perform semantic segmentation, background removal or character-pose synthesis. The GUI copies a human-readable instruction; it does not send messages to an external AI client.
+`REFERENCE_CONFLICT` means reference settings changed; read `pixel_reference` and revise the plan. Existing document/revision/lock/stroke protections also apply. GUI reference overlays never affect MCP pixels or exports. The automatic draft supports resampling, palette reduction and tone adjustment; optional explicitly applied cutout settings preprocess the source. It does not automatically remove backgrounds, perform semantic segmentation or synthesize poses. The GUI copies a human-readable instruction; it does not send messages to an external AI client.
 
 For conversion-only self-review, verify fidelity to the automatic draft, requested dimensions/colors and transparency. Review does not authorize repainting proportions or facial features. If the requested dimensions lose too much detail, explain the tradeoff and offer a larger draft rather than silently redesigning the character.
+
+## Optional background removal (0.7.13)
+
+Use only for an actual removal request or a task clearly requiring an isolated transparent source. Importing/converting a reference alone does not authorize it. Already-transparent images and native drawings normally need no cutout. Discover `pixel_help(topic="cutout")` through onboarding; no external guide is required.
+
+`pixel_cutout_preview` is read-only. Supply observed document_id/revision/reference_revision and optional settings; inspect ALL three actual images (original, result on checker, removed-alpha mask). Start with connected removal and modest tolerance. The settings patch applied settings; `base_preview_id` instead patches that preview's settings, keeping protection while adjusting tolerance or softness. Use stored reference coordinates (EXIF-normalized, sides at most1024), not the pixel canvas. Add seeds for enclosed background gaps; use protect_regions or keep/remove polygons for precise corrections. Explicit keep always wins. Low border confidence or excessive removal requires actual inspection and adjustment, not automatic approval.
+
+Apply exactly the inspected `preview_id` with `pixel_cutout(action="apply")`; previews expire after5minutes and reject changed artwork/references. `undo`/`redo` revert cutout settings only (20 steps per current session); `reset` restores the original background. Source files and existing painted pixels never change. Original reference plus applied parameters embed in saved drafts. Read returned tokens after every edit. `export` writes a transparent source PNG at stored resolution; it is reference processing, not an artwork review or a final-art export bypass. Animated imports process only the first frame. Existing files require explicit overwrite.
+
+This local color/connected-mask method is useful for solid/simple backgrounds. It does not infer people, hair, glass or busy-scene boundaries. Do not promise semantic or hair-level matting. Use masks or explain the limitation when automatic color removal cannot reliably isolate the subject; do not redesign it.
 
 ## Required final self-review (0.5)
 

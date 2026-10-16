@@ -14,6 +14,8 @@ Decide logical pixel size, transparent/background intent, viewpoint, silhouette,
 
 Set meaningful pixel_review_settings after selecting the intended project. Requirements should describe this task, not a default object or an arbitrary fixed frame count. For ordinary-image conversion, preserve the automatic draft by default. Artistic redraw needs the human's explicit request; this workflow does not authorize redesign.
 
+Background removal is OPTIONAL: only for an actual removal request or a task clearly requiring an isolated transparent source. Import/conversion alone does not authorize it. Skip already-transparent artwork. Discover pixel_help(topic="cutout") when needed: preview original/result/mask, adjust with base_preview_id to retain protection, apply the inspected result, undo/redo or reset as needed. It is a local color/mask tool, not a semantic segmentation model; existing canvas pixels stay unchanged.
+
 ## 3. Design before adding detail
 
 Work in this order: readable silhouette -> proportions -> large color groups -> consistent light/shadow -> restrained identifying details. Check at native size as well as integer enlargement. More pixels, noise and highlights do not automatically improve an icon. Keep material highlights distinct from the main subject and avoid unrelated decorations.

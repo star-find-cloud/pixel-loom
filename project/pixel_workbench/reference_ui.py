@@ -4,22 +4,13 @@ from __future__ import annotations
 import tkinter as tk
 from tkinter import filedialog
 
-from PIL import Image, ImageDraw, ImageTk
+from PIL import Image, ImageTk
 
 from .model import PixelError
 from .reference import decoded_asset, make_draft
+from .reference_ui_images import checker
 from .messages import user_error
 from .ui import BG, PANEL, FIELD, FG, MUTED, ACCENT, GREEN, SMALL, FONT, place_dialog
-
-
-def checker(image):
-    background = Image.new("RGBA", image.size, "#252d3b")
-    draw = ImageDraw.Draw(background)
-    for y in range(0, image.height, 8):
-        for x in range(0, image.width, 8):
-            if (x//8+y//8) % 2:
-                draw.rectangle((x, y, x+7, y+7), fill="#30394b")
-    return Image.alpha_composite(background, image)
 
 
 class ReferenceDialog:
@@ -41,6 +32,8 @@ class ReferenceDialog:
         header.pack(fill="x")
         editor.label(header, "图片 → 像素底稿", font=("Microsoft YaHei UI", 16, "bold")).pack(side="left")
         editor.button(header, "导入普通图片", lambda: self.load("subject"), True).pack(side="right", padx=5)
+        self.cutout_button = editor.button(header, "去背景", self.cutout)
+        self.cutout_button.pack(side="right", padx=5)
         footer = tk.Frame(d, bg=PANEL, padx=18, pady=12)
         footer.pack(side="bottom", fill="x")
         self.create_button = editor.button(footer, "生成像素底稿", self.begin, True)
@@ -94,7 +87,7 @@ class ReferenceDialog:
         row.pack(fill="x", pady=9)
         editor.label(row, "透明阈值", MUTED, SMALL).pack(side="left")
         editor._entry(row, self.variables["alpha_threshold"], 5).pack(side="right", ipady=3)
-        editor.label(controls, "默认仅采样、限色生成底稿。\n保留原图比例、轮廓和五官。\n背景按原图保留；明确要求后才重绘。", MUTED, SMALL,
+        editor.label(controls, "默认仅采样、限色生成底稿。\n保留原图比例、轮廓和五官。\n需要透明背景时，先点击顶部“去背景”。", MUTED, SMALL,
                      justify="left", wraplength=220).pack(anchor="w", pady=8)
         self.right = tk.Frame(body, bg=BG)
         self.right.pack(fill="both", expand=True)
@@ -188,6 +181,7 @@ class ReferenceDialog:
                     self.style_window.destroy()
                 self.style_window = None
         self.create_button.config(state="normal" if asset else "disabled")
+        self.cutout_button.config(state="normal" if asset else "disabled")
         self.status.config(text="参数已同步。点击生成像素底稿，保留原图设计。" if asset else "PNG / JPEG / WebP / BMP / GIF\n图片与像素工程保存在本地。", fg=MUTED)
         self.draw_images()
 
@@ -239,6 +233,17 @@ class ReferenceDialog:
         path = filedialog.askopenfilename(parent=self.dialog, title="导入普通原图" if role == "subject" else "导入像素风格参考", filetypes=[("图片", "*.png *.jpg *.jpeg *.webp *.bmp *.gif")])
         if path:
             self.send("/reference/setup", self.payload(action="load", role=role, path=path))
+
+    def cutout(self):
+        if not self.flush() or not self.editor.service.references.context["subject"]:
+            return None
+        from .cutout_ui import CutoutDialog
+        existing = getattr(self, "cutout_window", None)
+        if existing and existing.dialog.winfo_exists():
+            existing.dialog.lift()
+            return existing
+        self.cutout_window = CutoutDialog(self.editor, self.dialog)
+        return self.cutout_window
 
     def clear_style(self):
         if not self.flush():

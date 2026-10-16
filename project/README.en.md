@@ -4,7 +4,7 @@
 
 An AI-facing pixel-art tool with documented general drawing/animation operations and a visual editor for humans to inspect results, create artwork, fix small defects and import/save/export. Standard MCP clients and the desktop share editable layers, cels, palette, named regions, project iterations and undo history. Content is planned by the user's own AI.
 
-Version **0.7.12 is a public preview with bundled MCP creation and inspection methods**. Desktop behavior is tested on Windows. A headless backend and cross-platform CI configuration are included; other desktop platforms have not been fully validated.
+Public preview **0.7.13 adds optional local background removal** with original/result/mask previews, adjustment, protection, undo/redo and PNG export through the desktop and MCP. Import/conversion never automatically removes backgrounds. Desktop behavior is tested on Windows. A headless backend and cross-platform CI configuration are included; other desktop platforms have not been fully validated.
 
 This is the `project/` source subproject. The complete handoff starts with the parent `README.md`; development commands here run in this directory, next to `pyproject.toml`. Formal tests remain in `tests/`; generated test projects, logs and build caches are excluded.
 
