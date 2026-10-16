@@ -17,6 +17,9 @@ from pydantic import StrictInt
 from .model import Document, PixelError, atomic_json, integer
 from .projects import checked_path, file_digest, path_key
 
+MAX_FILES=1000
+MAX_BYTES=2*1024**3
+
 
 class CleanupSettings(TypedDict, total=False):
     targets: list[Literal['cache','versions','recovery','deleted_projects']]
@@ -123,12 +126,12 @@ class StorageManager:
             if len(protected)<100:
                 protected.append({'reason':reason,'path':str(path) if path else None,'project_id':project_id})
 
-        def add(path,root,category,project_id=None):
+        def add(path,root,category,project_id=None,ignore_age=False):
             try:
                 path=checked_path(path,root)
                 if not path.is_file():return
                 info=path.stat()
-                if settings['older_than_days']>0 and info.st_mtime>cutoff:
+                if not ignore_age and settings['older_than_days']>0 and info.st_mtime>cutoff:
                     protect('Within retention age',path,project_id);return
                 candidates.append({'path':str(path),'root':str(Path(root).resolve()),'category':category,
                                    'project_id':project_id,'bytes':info.st_size,'mtime_ns':info.st_mtime_ns})
@@ -217,24 +220,41 @@ class StorageManager:
                     p=Path(version['path'])
                     group.append((p,root))
                     if p.with_suffix('.json').exists():group.append((p.with_suffix('.json'),root))
-                if settings['older_than_days']>0 and any(p.stat().st_mtime>cutoff for p,_ in group):
+                if settings['older_than_days']>0 and any(p.suffix=='.pixloom' and p.stat().st_mtime>cutoff for p,_ in group):
                     protect('Project within retention age',project_id=project_id);continue
                 for p,parent in group:
                     before=len(candidates)
-                    add(p,parent,'deleted_projects',project_id)
+                    add(p,parent,'deleted_projects',project_id,ignore_age=True)
                     if len(candidates)>before:candidates[-1]['label']=entry['name']+' · '+p.name
                 purge_entries.append(deepcopy(entry))
 
         unique={p['path']:p for p in candidates}
         items=sorted(unique.values(),key=lambda x:(x['category'],x['project_id'] or '',x['path']))
-        if len(items)>1000 or sum(p['bytes'] for p in items)>2*1024**3:
-            raise PixelError('Cleanup exceeds 1000 files / 2 GiB. Select fewer projects/versions or a narrower age range.',code='CLEANUP_TOO_LARGE')
+        # Keep each snapshot/sidecar pair in the same batch. A large cleanup can
+        # continue under the same human request without an unbounded response/job.
+        groups=OrderedDict()
+        for item in items:
+            key=(item['category'],item['project_id'],str(Path(item['path']).with_suffix('')))
+            groups.setdefault(key,[]).append(item)
+        selected=[]
+        size=0
+        for group in groups.values():
+            cost=sum(i['bytes'] for i in group)
+            if len(selected)+len(group)<=MAX_FILES and size+cost<=MAX_BYTES:
+                selected.extend(group);size+=cost
+        selected_paths={i['path'] for i in selected}
+        remaining=[i for i in items if i['path'] not in selected_paths]
+        # A deleted project record disappears only after its entire managed
+        # file set has been cleared. Partial batches retain the catalog entry.
+        deferred_projects={i['project_id'] for i in remaining if i['category']=='deleted_projects'}
+        purge_entries=[e for e in purge_entries if e['id'] not in deferred_projects]
+        items=selected
         for item in items:item['sha256']=file_digest(item['path'])
         # Metadata/protection decisions are re-evaluated on apply, not trusted from the old preview.
         signature=hashlib.sha256(json.dumps({'items':items,'protected':protected,'protected_total':protected_total,
-            'purge_entries':purge_entries},sort_keys=True).encode()).hexdigest()
+            'purge_entries':purge_entries,'remaining_files':len(remaining)},sort_keys=True).encode()).hexdigest()
         return {'items':items,'protected':protected,'protected_total':protected_total,
-                'purge_entries':purge_entries,'signature':signature}
+                'purge_entries':purge_entries,'signature':signature,'remaining_files':len(remaining)}
 
     def plan(self, settings=None, plan_id=None, page=0, limit=20):
         if plan_id:
@@ -252,6 +272,7 @@ class StorageManager:
                 'expected_revision':plan['revision'],'settings':plan['settings'],'expires_at':plan['expires'],
                 'file_count':len(plan['items']),'reclaimable_bytes':sum(p['bytes'] for p in plan['items']),
                 'version_count':sum(i['category']=='versions' and i['path'].endswith('.pixloom') for i in plan['items']),
+                'remaining_files':plan['remaining_files'],
                 'deleted_project_count':len(plan['purge_entries']),'protected_count':plan['protected_total'],
                 'protected':plan['protected'][:20],**listing,'permanent':True}
 
@@ -273,7 +294,8 @@ class StorageManager:
         if current['signature']!=plan['signature']:
             raise PixelError('Files or protection flags changed; make a fresh cleanup plan',code='CLEANUP_PLAN_STALE')
         # Fix old version numbering before removing files so retained labels never change.
-        for project_id in plan['settings']['project_ids']:
+        affected={i['project_id'] for i in plan['items'] if i['category'] in ('versions','deleted_projects')}
+        for project_id in affected:
             excluded={Path(item['path']).stem for item in plan['items'] if item['project_id']==project_id and item['path'].endswith('.pixloom')}
             self.service.projects.freeze_version_numbers(project_id,exclude=excluded)
         removed,failed=[],[]

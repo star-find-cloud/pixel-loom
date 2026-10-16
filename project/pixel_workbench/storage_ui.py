@@ -152,6 +152,7 @@ class StorageDialog:
         self.plan=data
         lines=[f"将清理 {data['version_count']} 个旧版本、{data['file_count']} 个文件，预计释放 {size_text(data['reclaimable_bytes'])}；彻底移除 {data['deleted_project_count']} 条已删除项目记录。",
                f"已保护 / 跳过 {data['protected_count']} 项。第 {data['page']+1}/{data['pages']} 页。",'']
+        if data['remaining_files']:lines.insert(2,f"另有 {data['remaining_files']} 个文件等待后续批次；完成后可按同一范围再次预览清理。")
         names={'cache':'缓存','versions':'旧版本','recovery':'恢复副本','deleted_projects':'已删除项目'}
         lines += [f"{names[item['category']]} · {size_text(item['bytes'])} · {item.get('label') or Path(item['path']).name}" for item in data['items']]
         if data['protected']:

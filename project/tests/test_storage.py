@@ -200,3 +200,18 @@ class StorageTests(unittest.TestCase):
         self.assertFalse(result['ok']);self.assertEqual(result['failed_count'],1)
         self.assertTrue(first.exists());self.assertFalse(second.exists())
         self.assertTrue(self.apply(plan)['already_applied']);self.assertTrue(first.exists())
+
+    def test_large_cleanup_batches_keep_snapshot_pairs_and_project_catalog_until_complete(self):
+        self.service.save_project();entry=self.entry
+        self.service.projects.set_deleted([entry['id']]);self.service.path=None
+        with patch('pixel_workbench.storage.MAX_FILES',2):
+            plan=self.plan(targets=['deleted_projects'],deleted_project_ids=[entry['id']])
+            self.assertEqual(plan['file_count'],2);self.assertGreater(plan['remaining_files'],0)
+            result=self.apply(plan)
+            self.assertFalse(result['purged_project_ids']);self.assertTrue(self.service.projects.entries)
+            for _ in range(10):
+                plan=self.plan(targets=['deleted_projects'],deleted_project_ids=[entry['id']])
+                result=self.apply(plan)
+                if not plan['remaining_files']:break
+            self.assertEqual(result['purged_project_ids'],[entry['id']])
+            self.assertFalse(self.service.projects.entries)
