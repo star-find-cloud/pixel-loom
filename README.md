@@ -1,8 +1,8 @@
 # Pixel Loom · 像素织机
 
-**0.7.6 · Windows 便携版 · 使用者和 AI 的统一入口**
+**0.7.7 · Windows 便携版 · 使用者和 AI 的统一入口**
 
-[下载 Windows 便携版](https://github.com/yangsir2077/pixel-loom/releases/download/v0.7.6/pixel-loom-0.7.6-windows-x64.zip) · [版本说明与校验值](https://github.com/yangsir2077/pixel-loom/releases/tag/v0.7.6) · [反馈问题](https://github.com/yangsir2077/pixel-loom/issues)
+[下载 Windows 0.7.7 便携版](https://github.com/yangsir2077/pixel-loom/releases/download/v0.7.7/pixel-loom-0.7.7-windows-x64.zip) · [版本说明与校验值](https://github.com/yangsir2077/pixel-loom/releases/tag/v0.7.7) · [反馈问题](https://github.com/yangsir2077/pixel-loom/issues)
 
 这是一个人和 AI 共用画布、图层、动画与撤销记录的本地像素编辑器。普通使用不需要打开源码或测试文件，也不需要单独安装 Python。
 
@@ -13,6 +13,14 @@
 启动后会显示使用说明。点击“了解，进入”、按 Esc 或关闭说明即可直接使用全部功能。打赏完全自愿；选择 5／10／15／20 元后显示作者提供的对应微信收款图，不检测付款、不解锁额外功能。
 
 **分发应用时，保留整个 `app` 文件夹。** `_internal` 是必需运行库，不能只拿走一个 exe。普通使用者只需要应用和这份说明。
+
+### 检查更新
+
+“更多 → 检查更新”可查看新版本、更新说明并打开 Windows 便携版下载。桌面启动后也会在后台检查；发现新版显示可关闭的提醒，不打断绘画。成功检查后，24 小时内不重复自动查询，手动检查不受这个间隔限制。
+
+更新窗口可关闭启动检查，也可选择是否包含公开测试版（0.x 版本默认包含）。离线或查询失败时，软件继续正常使用，仍可直接打开发版页面。只有点击下载或发布页按钮时才打开浏览器，不自动安装或覆盖程序。
+
+版本检查只请求 GitHub 的公开发布信息，不上传作品、参考图、工程路径或 AI 客户端配置；偏好和检查时间保存在用户数据目录，不在交付目录。无窗口 MCP 服务不会自动检查网络。旧用户需要先手动安装包含此功能的版本，之后才能收到提醒。
 
 ## 2. 目录说明
 

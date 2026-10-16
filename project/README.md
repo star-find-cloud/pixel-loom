@@ -4,7 +4,7 @@
 
 一个人和 AI 共用画布、图层、动画与撤销记录的本地像素画／序列帧编辑器。你可以手动画；支持 MCP 的 AI 客户端（Codex、Claude Desktop 等）通过标准 **MCP / stdio** 直接调用原生绘图工具，不需要模拟鼠标画画。免费开源，采用 [MIT](LICENSE) 许可。
 
-**当前版本 0.7.6，公开测试版。** Windows 桌面端经过本机测试；其他平台可从源码运行，桌面适配尚未完整验证。
+**当前版本 0.7.7，公开测试版。** Windows 桌面端经过本机测试；其他平台可从源码运行，桌面适配尚未完整验证。
 
 这是 `project/` 源码子项目。整份交付的使用入口在上一级 `README.md`；本文的“仓库根目录”和开发命令均指包含 `pyproject.toml` 的本目录。`tests/` 是保留给开源维护的正式测试，不是本地测试产物；临时工程、日志和构建缓存不随交付分发。
 
@@ -12,7 +12,7 @@
 
 ### 方式一：下载 Windows 便携版（推荐）
 
-1. 打开 [GitHub Releases](https://github.com/yangsir2077/pixel-loom/releases/tag/v0.7.6)，下载 `pixel-loom-0.7.6-windows-x64.zip`。
+1. 打开 [GitHub Releases](https://github.com/yangsir2077/pixel-loom/releases)，下载对应版本的 `pixel-loom-<版本>-windows-x64.zip`。
 2. 解压**整个** `PixelLoom` 文件夹，双击根目录的 `打开像素织机.cmd`，或打开 `app/PixelLoom.exe`。保留完整 `app` 文件夹，包含 `PixelLoomMCP.exe` 和 `_internal`；只拷贝一个 exe 不能运行。
 3. 便携版内置 Python 运行库，不需要另装 Python。
 
@@ -33,6 +33,10 @@ python -m venv .venv
 在 AI 客户端里添加一个**本地 stdio** MCP 服务：便携版命令是 `PixelLoomMCP.exe`，参数 `--mcp`；源码版命令是虚拟环境的 Python，参数 `-m pixel_workbench --mcp`。具体配置见第 3 节。接好后在新对话里让 AI 调用 `pixel_onboard` 确认连接。
 
 界面操作、自动化、截图反馈和完整功能列表见 [使用手册](docs/USER_GUIDE.md)。
+
+### 检查更新
+
+桌面的“更多 → 检查更新”提供版本说明、下载和发布页入口。启动后会异步检查公开 GitHub 发布；成功检查后自动查询间隔为 24 小时，可关闭启动检查或调整公开测试版渠道。只请求版本信息，不上传作品或本地配置；下载需用户点击，不自动替换应用。无窗口 MCP 不自动查询网络。具体更新方式见使用手册。
 
 如果你是第一次接手的 AI，先读第 1 节。首次接入客户端读第 3 节。**读懂文档不等于已经连接 MCP；必须实际调用工具确认。**
 

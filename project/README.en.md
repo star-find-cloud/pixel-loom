@@ -4,13 +4,17 @@
 
 An editable local pixel-art and frame-animation workbench for humans and AI agents. A native desktop window and standard MCP clients share layers, cels, palette, named regions and undo history.
 
-Version **0.7.6 is a public preview**. Desktop behavior is tested on Windows. A headless backend and cross-platform CI configuration are included; other desktop platforms have not been fully validated.
+Version **0.7.7 is a public preview**. Desktop behavior is tested on Windows. A headless backend and cross-platform CI configuration are included; other desktop platforms have not been fully validated.
 
 This is the `project/` source subproject. The complete handoff starts with the parent `README.md`; development commands here run in this directory, next to `pyproject.toml`. Formal tests remain in `tests/`; generated test projects, logs and build caches are excluded.
 
 ## Download (Windows)
 
-Download `pixel-loom-0.7.6-windows-x64.zip` from [GitHub Releases](https://github.com/yangsir2077/pixel-loom/releases/tag/v0.7.6), extract the whole `PixelLoom` folder and run the root launcher or `app/PixelLoom.exe`. Keep the complete `app` folder, including `PixelLoomMCP.exe` and `_internal`. The portable build bundles its Python runtime.
+Download the matching `pixel-loom-<version>-windows-x64.zip` from [GitHub Releases](https://github.com/yangsir2077/pixel-loom/releases), extract the whole `PixelLoom` folder and run the root launcher or `app/PixelLoom.exe`. Keep the complete `app` folder, including `PixelLoomMCP.exe` and `_internal`. The portable build bundles its Python runtime.
+
+## Check for updates
+
+More → Check for updates reads public GitHub release metadata asynchronously and provides notes and Windows ZIP links. Desktop startup also checks in the background, with a 24-hour interval after successful checks and a nonblocking new-version banner. Users can disable startup checks and choose whether to include public previews; 0.x defaults to including them. Headless MCP never checks automatically. No artwork, reference images, local paths or client settings are uploaded. Preferences stay in the user data directory, and browser links open only on explicit clicks. This feature does not install updates automatically.
 
 ## Install from source
 

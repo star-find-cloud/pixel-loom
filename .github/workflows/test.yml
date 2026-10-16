@@ -29,6 +29,8 @@ jobs:
         if: runner.os == 'Windows'
       - run: python -m tests.gui_editing_smoke
         if: runner.os == 'Windows'
+      - run: python -m tests.gui_updates_smoke
+        if: runner.os == 'Windows'
       - run: python -m tests.gui_welcome_smoke
         if: runner.os == 'Windows'
       - run: python -m tests.gui_feedback_smoke

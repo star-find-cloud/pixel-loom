@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.7 — release checks and download reminders
+
+- Add More → Check for updates and a searchable command. Version checks run in a background thread so editing and MCP remain responsive.
+- Check public GitHub releases after desktop startup, at most once per 24 hours after a successful check. A new version produces a nonblocking banner with release notes and a Windows ZIP download button.
+- Support stable and public preview channels, including the existing 0.x preview releases. Compare semantic versions numerically and ignore drafts or invalid tags.
+- Keep startup/channel preferences in the user's data directory. Allow startup checks to be disabled; headless MCP and diagnostics do not check the network automatically.
+- Handle offline requests, rate limits, malformed responses and missing packages without blocking application use. Browser links are restricted to this project's HTTPS release/download paths and open only on explicit clicks.
+- Request public version metadata only; never upload artwork, references, saved paths or client settings. Downloading and installing remain explicit user actions.
+- Test notification, cache, preferences, slow requests, link opening and shutdown in an isolated GUI runtime; exclude test data and local usage records from release bundles.
+
 ## 0.7.6 — reliable editing and a roomier workspace
 
 - Frame, layer and selection navigation preserves drawing undo/redo and avoids serializing the entire document. Refresh only affected timeline thumbnails.

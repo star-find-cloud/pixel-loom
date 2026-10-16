@@ -67,6 +67,7 @@ class Editor(DesktopUI):
         self.autosave_job = None
         self.welcome_window = None
         self.welcome_job = None
+        self.updates = None
         try:
             self.layout_preferences = json.loads((RUNTIME / "ui-layout.json").read_text(encoding="utf-8"))
             if not isinstance(self.layout_preferences, dict):
@@ -101,6 +102,12 @@ class Editor(DesktopUI):
         root.protocol("WM_DELETE_WINDOW", self.close)
         self._shortcuts()
         self.welcome_job = root.after(300, self.show_startup_guide)
+        from .update_ui import UpdateController
+        self.updates = UpdateController(self)
+
+    def show_updates(self):
+        if self.updates is not None:
+            return self.updates.show_dialog()
 
     def show_startup_guide(self):
         self.welcome_job = None
@@ -1218,6 +1225,8 @@ class Editor(DesktopUI):
         if not self.can_replace():
             return
         self.save_ui_layout()
+        if self.updates is not None:
+            self.updates.close()
         self.stop_play()
         for name in ('fit_job','pump_job','autosave_job','welcome_job'):
             job=getattr(self,name,None)

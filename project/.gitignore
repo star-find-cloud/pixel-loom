@@ -21,6 +21,7 @@ research/
 session.json
 reference-workspace.json
 registration-status.json
+update-preferences.json
 *.pixel-loom-backup-*
 Thumbs.db
 .DS_Store

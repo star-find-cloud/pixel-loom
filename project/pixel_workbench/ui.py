@@ -235,6 +235,7 @@ class DesktopUI:
                            relief="flat",font=SMALL,padx=10,pady=6)
         more_menu=tk.Menu(more,tearoff=False,bg=FIELD,fg=FG)
         for text,callback in [("检查成品",self.quality_dialog),("动画总览",self.overview_dialog),
+                              ("检查更新",self.show_updates),
                               ("使用说明与支持作者",self.show_welcome),
                               ("MCP 首次接入配置",self.connection_dialog),("协作记录",self.activity_dialog),
                               ("旧版问题记录",lambda:self.feedback_panel.history()),
@@ -971,6 +972,7 @@ class DesktopUI:
         listing.pack(fill="both", expand=True, padx=18, pady=12)
         commands = [(f"{name}   [{key}]", lambda t=tool: self.choose_tool(t)) for tool, (name, key, _) in TOOL_INFO.items()]
         commands += [("适应画布  [F]", self.fit), ("另存为  [Ctrl Shift S]", self.save_as), ("新建工程", self.new_dialog),
+                     ("检查更新 · 新版本与下载", self.show_updates),
                      ("成品自检 · 证据 / 循环播放 / AI结论",self.quality_dialog),
                      ("图片转像素 · 参考图 / MCP 重绘", self.reference_dialog),
                      ("导出素材", self.export_dialog), ("调整画布", self.resize_dialog), ("多帧总览", self.overview_dialog),
