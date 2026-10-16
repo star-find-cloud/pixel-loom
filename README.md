@@ -1,10 +1,12 @@
 # Pixel Loom · 像素织机
 
-**0.7.11 公开测试版 · Windows 便携版 · 使用者和 AI 的统一入口**
+**0.7.12 公开测试版 · Windows 便携版 · 使用者和 AI 的统一入口**
 
-[下载 Windows 0.7.11 便携版](https://github.com/yangsir2077/pixel-loom/releases/download/v0.7.11/pixel-loom-0.7.11-windows-x64.zip) · [版本说明与校验值](https://github.com/yangsir2077/pixel-loom/releases/tag/v0.7.11) · [反馈问题](https://github.com/yangsir2077/pixel-loom/issues)
+[下载 Windows 0.7.12 便携版](https://github.com/yangsir2077/pixel-loom/releases/download/v0.7.12/pixel-loom-0.7.12-windows-x64.zip) · [版本说明与校验值](https://github.com/yangsir2077/pixel-loom/releases/tag/v0.7.12) · [反馈问题](https://github.com/yangsir2077/pixel-loom/issues)
 
 这是一个面向 AI 的像素创作工具，也是供用户查看、创作和修改作品的可视化编辑器。AI 通过 MCP 和配套说明使用通用绘图与动画工具；用户直观看结果、手动修细节，并使用导入、保存和导出等基础功能。普通使用不需要打开源码或测试文件，也不需要单独安装 Python。
+
+0.7.12 已加入 MCP 自带制作与检查流程：新接入的 AI 从 `pixel_onboard` 取得方法入口，按需读取制作、动画和检查指南，无需使用者另发工作流文档。
 
 0.7.10 专注通用绘图、图层、动画编辑、检查与 MCP 工具。内容、风格和动作由使用者自己的 AI 决定；不提供写死的特效生成器，不自动载入示例作品。0.7.9 工程仍能完整打开和编辑。
 
@@ -43,6 +45,8 @@ LICENSE               开源许可证
 作品、参考图和历史记录保存在用户数据目录，通常不在这里。同一台电脑看到旧作品，是应用读取了已有用户资料。整理本目录不会删除这些作品。
 
 ## 3. 给 AI：接手后按这个顺序
+
+接入后不需要使用者额外提供制作文档：读取 `pixel_onboard.creation_workflow.read_next`，调用 `pixel_help(topic="workflow")`；动画任务再读 `animation_workflow`，交付前读 `inspection_workflow`。指南随 MCP 返回，包含造型/分层、可选客户端坐标计算、清理旧运动像素、看图修正和完整自检；不包含成品生成器。资源客户端也可读取 `pixel-loom://workflow`。AI 仍需具备看图和设计能力，流程不能保证所有模型达到相同水平。
 
 1. 找到名称以 `pixel_onboard` 结尾的 MCP 工具并调用 `{}`。客户端可能添加前缀，不要写死完整工具名。**读取本说明不会自动建立 MCP 连接。**
 2. 读取返回的 `current_document`、`document_id`、`revision`、实际保存路径、图层、帧、参考、反馈和自检状态，再查看实际图像。不要假定是空白工程。

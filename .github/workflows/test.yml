@@ -21,6 +21,7 @@ jobs:
       - run: python -m pip install -e .
       - run: python -m unittest discover -s tests -v
       - run: python -m tests.mcp_public_smoke
+      - run: python -m tests.mcp_creation_smoke
       - run: python -m tests.mcp_reference_smoke
       - run: python -m tests.mcp_quality_smoke
       - run: python -m tests.mcp_feedback_smoke

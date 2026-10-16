@@ -49,7 +49,8 @@ async def run(artifacts=None, server_executable=None):
             assert "polygon" in encoded_schema and "region_transform" in encoded_schema
             assert "additionalProperties" in encoded_schema
             resources = await first.list_resources()
-            assert len(resources.resources) == 3
+            assert {"pixel-loom://guide", "pixel-loom://schema/operations", "pixel-loom://recipes",
+                    "pixel-loom://workflow"} <= {str(resource.uri) for resource in resources.resources}
             prompts = await first.list_prompts()
             assert len(prompts.prompts) == 4
             guide = data(await first.call_tool("pixel_onboard", {}))

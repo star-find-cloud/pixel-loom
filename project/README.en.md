@@ -4,7 +4,7 @@
 
 An AI-facing pixel-art tool with documented general drawing/animation operations and a visual editor for humans to inspect results, create artwork, fix small defects and import/save/export. Standard MCP clients and the desktop share editable layers, cels, palette, named regions, project iterations and undo history. Content is planned by the user's own AI.
 
-Version **0.7.11 is a public preview**. Desktop behavior is tested on Windows. A headless backend and cross-platform CI configuration are included; other desktop platforms have not been fully validated.
+Version **0.7.12 is a public preview with bundled MCP creation and inspection methods**. Desktop behavior is tested on Windows. A headless backend and cross-platform CI configuration are included; other desktop platforms have not been fully validated.
 
 This is the `project/` source subproject. The complete handoff starts with the parent `README.md`; development commands here run in this directory, next to `pyproject.toml`. Formal tests remain in `tests/`; generated test projects, logs and build caches are excluded.
 
@@ -30,6 +30,8 @@ pixel-loom
 On Windows, `setup.ps1` and the supplied launcher are alternatives. A portable Windows folder contains `PixelLoom.exe`, `PixelLoomMCP.exe` and `_internal`; keep them together.
 
 ## Connect MCP
+
+Creation methods are bundled with MCP. Follow `pixel_onboard.creation_workflow.read_next` to `pixel_help(topic="workflow")`, then `animation_workflow` for motion and `inspection_workflow` before delivery. The optional `pixel-loom://workflow` resource exposes the same guides. They teach design, clean layers/cels, optional host-side calculations, actual image inspection and repair/review, without finished-art generators or extra user documents. The host needs image-viewing capability; instructions do not guarantee equivalent artistic quality across models.
 
 The local service starts with the editor; there is no GUI activation step. For first-time host registration, generate a configuration with `pixel-loom-config --format both`, or use More → MCP setup. By default this prints/copies a configuration without modifying other applications. Explicit `--install codex` or `--install claude-desktop` creates a backup and preserves other settings.
 

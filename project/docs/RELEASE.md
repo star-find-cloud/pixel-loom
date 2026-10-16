@@ -6,6 +6,7 @@ The repository can be prepared locally without publishing a repository, uploadin
 python -m pip install -e ".[dev]"
 python -m unittest discover -s tests -v
 python -m tests.mcp_public_smoke
+python -m tests.mcp_creation_smoke
 python -m tests.mcp_reference_smoke
 python -m tests.mcp_quality_smoke
 python -m tests.mcp_feedback_smoke

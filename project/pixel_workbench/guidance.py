@@ -1,6 +1,7 @@
 """Compact onboarding and executable recipes using native drawing operations."""
 from copy import deepcopy
 from .operations import guide
+from .creation_guidance import workflow_entry
 
 STARTER = [
     {"op": "palette_set", "colors": ["#00000000", "#101c2bff", "#5fb7b8ff", "#d5f5e4ff"]},
@@ -32,6 +33,7 @@ RECIPES = {
 def onboarding(state=None, workspace=None):
     return {"application": "Pixel Loom", "purpose": "Editable pixel art and animation shared by humans and MCP clients.",
             "first_steps": ["Read current_document before deciding to edit it or create a new one.",
+                "Before making artwork, follow creation_workflow.read_next: pixel_help(topic='workflow'). Read animation_workflow for motion and inspection_workflow before delivery; no external document is needed.",
                 "Ordinary image conversion defaults to the automatic pixel draft. Do not artistically redraw proportions, silhouette or facial features unless the human explicitly requests it; prepared settings and references are not authorization.",
                 "Keep separate actions/variants as separate projects: pixel_projects list -> fork(name=...) BEFORE editing a new action. switch saves the outgoing work; compare shows retained animations together; versions/restore recover an old save into a new project.",
                 "For problem screenshots see feedback_screenshots below: verify DOC/FRAME/ROI, inspect pixels, and ask in chat if unclear. Screenshots do not require a ticket. Existing saved legacy current_document.feedback can still be inspected via pixel_feedback; never invent user answers.",
@@ -44,6 +46,7 @@ def onboarding(state=None, workspace=None):
                 "A program-only pass is not aesthetic approval. Uncertainty is not a pass. Final export is gated; draft=true is explicitly unreviewed.",
                 "Save .pixloom after review to retain the report, then export. Export can select layers without changing visibility."],
             "current_document": state, "workspace": workspace, "coordinates": guide()["coordinates"],
+            "creation_workflow": workflow_entry(),
             "project_preservation":{"tool":"pixel_projects","rule":"Never overwrite an idle animation to make walking or another new action. Fork a separate named project with a fresh document id first. Continue the current project only for fixes to the same work.",
                 "workflow":"list -> fork/new -> edit -> save; switch to revisit; compare all pages for side-by-side observation; versions -> version_preview compares actual frames; use_version continues an earlier iteration in the SAME project; restore makes a separate project",
                 "management":"register adds existing files without switching; only at the user's request, remove hides projects reversibly while retaining files/history. deleted -> undelete restores their original ids/numbers. Never delete earlier work merely to tidy the shelf."},
@@ -78,6 +81,8 @@ def onboarding(state=None, workspace=None):
             "artwork_protection": "Locked layers reject drawing. Unsaved document replacement requires saving or explicit discard_changes=true.",
             "starter_recipe": {"requires": "A NEW EMPTY 32×32 project. Read its fresh revision and document_id after creation.", "ops": deepcopy(STARTER)},
             "next_help": {"catalog": "pixel_help(topic='operations')", "animation": "pixel_help(topic='animation')",
+                          "creation": "pixel_help(topic='workflow')", "motion_design": "pixel_help(topic='animation_workflow')",
+                          "inspection": "pixel_help(topic='inspection_workflow')", "complete_workflow": "pixel-loom://workflow",
                           "recipes": "pixel-loom://recipes", "machine_schema": "pixel-loom://schema/operations"},
             "limits": {"canvas": "1–512 pixels per side", "frames": 256, "layers": 64, "total_cel_pixels": 8388608,
                        "history_steps": 40, "preview_pixels": 4194304, "export_pixels": 16777216},

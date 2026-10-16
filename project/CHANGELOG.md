@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.12 — 2026-10-17: bundled MCP creation and inspection methods
+
+- Guide newly connected clients from initialization and onboarding to task-independent design, native drawing, layer/motion planning, optional host-side computation and real visual inspection.
+- Add focused workflow/animation_workflow/inspection_workflow help and the optional pixel-loom://workflow resource. Keep onboarding compact and make all guidance available through standard MCP without extra user files.
+- Teach clean moving cels, anchor/area/grid constraints, actual image/timing/seam checks, bounded repairs and honest review/export. No content generator, finished artwork preset, script executor or new desktop panel is added.
+- Cover read-only discovery, fresh independent MCP sessions, native animation, residue repair, stale reviews and final export in isolated protocol tests. These tests do not claim every external AI model has equivalent artistic ability.
+
 ## 0.7.11 — 2026-10-16: storage cleanup for humans and AI
 
 - Add space usage, immutable cleanup previews and an explicitly requested cleanup MCP tool. Protect active art, latest/pinned versions, unique recovery and external files; reject stale plans and make retries idempotent.

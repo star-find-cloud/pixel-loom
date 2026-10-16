@@ -4,7 +4,21 @@ Connect through a standard stdio MCP client. Start with **`pixel_onboard`**. The
 
 The editor starts its local service automatically. There is no AI tab, activation switch or creation form for the user to complete. Standard MCP hosts still need one-time server registration. The human's Preview mode hides both sidebars; screenshot and manual tools appear in their respective modes. Use the advertised tools and resources directly without asking the human to open an AI panel.
 
-## Tools
+## Bundled creation methods (0.7.12)
+
+New MCP sessions receive workflow discovery in initialization instructions and `pixel_onboard.creation_workflow`. Follow its machine-readable `read_next` tool/arguments:
+
+- `pixel_help(topic="workflow")`: brief/specification, preservation, silhouette/color design, layer responsibility, native batches and observed revisions.
+- `pixel_help(topic="animation_workflow")`: fixed/moving parts, anchors, timing/phase, clean cels, optional host-side geometry/constraint calculations, residue prevention and all-frame inspection.
+- `pixel_help(topic="inspection_workflow")`: actual frame/detail/timing/seam images, diagnostic paging, repairs with fresh evidence, honest pass/fail/uncertain findings and scoped final export.
+
+These read-only calls do not start or edit a document and do not require a local README or another file from the human. Clients supporting resources may instead read `pixel-loom://workflow`. Existing drawing, animation and finish prompts also point to the relevant methods. The full guides are packaged resources, including in the portable executable.
+
+Use native operations directly or let the host compute coordinates/ops. Pixel Loom does not execute arbitrary Python/JavaScript or contain an art model; host computation is optional and image viewing is required for visual judgments. This is a general design/check workflow, not a preset library. Do not automatically instantiate examples or import external finished images while claiming native creation. Keep conversion-only drafts faithful unless the human explicitly requests redraw.
+
+The isolated `tests.mcp_creation_smoke` verifies discovery from fresh protocol clients, native drawing/clean-frame motion, actual image decoding, failed verdict/repair/stale evidence and final exports. It is a protocol regression, not a benchmark proving every external AI model understands art or produces the same quality.
+
+## Tool reference
 
 | Tool | Result |
 | --- | --- |

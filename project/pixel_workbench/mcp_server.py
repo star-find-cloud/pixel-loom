@@ -13,6 +13,7 @@ from pydantic import StrictInt
 
 from . import __version__
 from .guidance import RECIPES, onboarding
+from .creation_guidance import TOPICS as CREATION_TOPICS, workflow_help, workflow_resource
 from .lifecycle import ensure_editor
 from .operations import EditOperation, full_schema, guide
 from .reference import ReferenceSettings
@@ -23,6 +24,9 @@ from .storage import CleanupSettings, HELP as CLEANUP_HELP, paged
 
 server = FastMCP("Pixel Loom", instructions=(
     "Pixel-art/animation editor shared with the human. Start with pixel_onboard. "
+    "Before making artwork read pixel_help(topic='workflow'); animation_workflow explains clean moving layers, "
+    "and inspection_workflow explains actual image inspection, repairs and honest delivery. "
+    "These guides are bundled and readable through MCP; no extra document from the human is required. "
     "Native polygon/bezier/region tools let you draw directly without external pixel-generation scripts. "
     "Read current state, preserve artwork, use observed document/revision tokens and inspect real previews after coherent batches. "
     "pixel_help exposes exact operation schemas/examples; resources and prompts provide runnable recipes. "
@@ -93,7 +97,11 @@ def preview(client, frame=None, scale=8, rect=None, checker=True):
 @server.tool(annotations=READ, structured_output=False)
 @safe
 def pixel_onboard() -> CallToolResult:
-    """START HERE: discover current artwork, workspace, coordinate rules, a safe workflow and a runnable native-drawing recipe."""
+    """START HERE: read current art and creation_workflow.read_next for design, native drawing, animation and visual inspection.
+
+    Before making art call pixel_help(topic='workflow'); use animation_workflow for motion and
+    inspection_workflow before delivery. The guides arrive through MCP, without external files or artwork presets.
+    """
     client = ensure_editor()
     return result(onboarding(client.request("/state"), client.request("/workspace")))
 
@@ -101,10 +109,15 @@ def pixel_onboard() -> CallToolResult:
 @server.tool(annotations=READ, structured_output=False)
 @safe
 def pixel_help(topic: str = "overview", operation: str | None = None) -> CallToolResult:
-    """Read focused help: operations/drawing/transform/selection/layers/animation/palette/canvas/library/character/motion/cleanup.
+    """Read creation guides with topic='workflow', 'animation_workflow' or 'inspection_workflow'.
 
+    These explain design, layers, host-side coordinate computation, clean frames, real image inspection,
+    repair/recheck and honest export. They contain methods, not finished-content generators.
+    Operation help: operations/drawing/transform/selection/layers/animation/palette/canvas/library/character/motion/cleanup.
     Supply operation='polygon' (or another op) for its exact JSON Schema and example. Does not start the editor.
     """
+    if topic in CREATION_TOPICS and operation is None:
+        return result(workflow_help(topic))
     if topic=='cleanup' and operation is None:return result(CLEANUP_HELP)
     if topic=="feedback_images" and operation is None:
         from .feedback_capture import GUIDE_PATH,FORMAT,PNG_KEY,VISIBLE_MARKER
@@ -116,7 +129,11 @@ def pixel_help(topic: str = "overview", operation: str | None = None) -> CallToo
                        "capture_example": {"action": "capture", "settings": {"name": "Hero", "fixed_regions": ["face"]},
                                            "expected_document_id": "<observed id>", "expected_revision": "<observed integer>"},
                        "report_paging": "pixel_motion_check() -> report_id/pages; call again with report_id and every remaining page (zero-based)."})
-    return result(guide(topic, operation))
+    data = guide(topic, operation)
+    if "topics" in data:
+        data["topics"] += list(CREATION_TOPICS)
+        data["creation_workflow"] = onboarding()["creation_workflow"]
+    return result(data)
 
 
 @server.tool(annotations=READ, structured_output=False)
@@ -535,6 +552,12 @@ def schema_resource() -> str:
     return json.dumps(full_schema(), ensure_ascii=False)
 
 
+@server.resource("pixel-loom://workflow", mime_type="application/json")
+def creation_workflow_resource() -> str:
+    """Bundled design, animation, visual inspection and repair methods; no artwork presets."""
+    return json.dumps(workflow_resource(), ensure_ascii=False)
+
+
 @server.resource("pixel-loom://recipes", mime_type="application/json")
 def recipes_resource() -> str:
     """Runnable native sprite/animation recipes with explicit prerequisites."""
@@ -545,20 +568,24 @@ def recipes_resource() -> str:
 def draw_sprite_prompt(brief: str, size: str = "32") -> str:
     """Draw an editable sprite with native tools and visual feedback."""
     return (f"Create this pixel-art sprite in Pixel Loom: {brief}\nSuggested canvas: {size} pixels per side. "
-            "Call pixel_onboard first; preserve existing unsaved artwork. Use a limited palette and named layers. "
+            "Call pixel_onboard and pixel_help(topic='workflow') first; preserve existing unsaved artwork. "
+            "Design silhouette/proportions/color groups before details, with a limited palette and named layers. "
             "Draw using native polygon/bezier/stroke; stamps are optional. Use observed tokens, validate uncertain edits, "
-            "inspect actual images, then save .pixloom and transparent PNG. The user's brief takes precedence over recipe defaults.")
+            "inspect actual images and follow pixel_help(topic='inspection_workflow') to repair/review, "
+            "then save .pixloom and transparent PNG. The user's brief takes precedence over recipe defaults.")
 
 
 @server.prompt(name="animate_sprite")
 def animate_sprite_prompt(action: str, frame_count: str = "6") -> str:
     """Animate existing artwork with action tags and a frame contact sheet."""
     return (f"Animate the current Pixel Loom sprite: {action}. Suggested frames: {frame_count}. "
-            "Read pixel_onboard and inspect current frames/layers. For a new action, first pixel_projects fork with a clear "
+            "Read pixel_onboard, pixel_help(topic='workflow') and pixel_help(topic='animation_workflow'); "
+            "inspect current frames/layers. For a new action, first pixel_projects fork with a clear "
             "name and observed tokens, then use its fresh tokens; keep the earlier animation as its own project. "
-            "For a repair to the same action, continue it. Preserve the original pose. Duplicate frames and transform "
+            "For a repair to the same action, continue it. Preserve the original pose and fixed anchors. "
+            "Separate static and moving layers; clear/rebuild moving cels without accumulating earlier contours. Duplicate frames and transform "
             "local regions, designing anticipation/recovery where appropriate. Set an action tag, inspect pixel_contact_sheet, "
-            "save the editable project and export its sheet+timing JSON.")
+            "follow pixel_help(topic='inspection_workflow'), save the reviewed editable project and export its sheet+timing JSON.")
 
 
 @server.prompt(name="redraw_reference")
@@ -581,7 +608,8 @@ def redraw_reference_prompt(brief: str = "Follow the prepared reference settings
 @server.prompt(name="finish_and_review")
 def finish_and_review_prompt(brief: str = "Finish the current artwork and verify it against the user's requirements") -> str:
     """Automatically finish, visually inspect, repair and recheck current art before delivering it."""
-    return (f"Complete this Pixel Loom task: {brief}. Call pixel_onboard, inspect current art and references, and set "
+    return (f"Complete this Pixel Loom task: {brief}. Call pixel_onboard and pixel_help(topic='inspection_workflow'); "
+            "inspect current art and references. "
             "For conversion-only tasks, preserve the automatic draft and check faithful conversion; do not redesign "
             "proportions, silhouette or facial features to pass a review. Artistic redraw needs an explicit human request. Set "
             "clear acceptance requirements with pixel_review_settings (such as exactly 8 frames, transparent background "
