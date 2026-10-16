@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.11 — 2026-10-16: storage cleanup for humans and AI
+
+- Add space usage, immutable cleanup previews and an explicitly requested cleanup MCP tool. Protect active art, latest/pinned versions, unique recovery and external files; reject stale plans and make retries idempotent.
+- Add version pinning, selected-history deletion and selected deleted-project purge through one on-demand storage dialog. Keep stable version numbers after deletion.
+- Bound project/version/plan metadata with pagination and provide focused human-intent mappings in MCP help and usage documentation. No automatic artwork deletion.
+
 ## 0.7.10 — 2026-10-16: general AI tools and project iterations
 
 - Remove the built-in pixel-effect generator, its menu/MCP tool and auto-loaded example artwork. The connected AI creates content using general drawing, layer, frame, preview and export tools.

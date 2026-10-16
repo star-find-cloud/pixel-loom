@@ -39,3 +39,7 @@ Final MCP exports check a current passing report; explicit drafts remain availab
 ## Persistent iterations
 
 ProjectLibrary stores immutable `.pixloom` snapshots and small descriptive sidecars in per-project history directories; unsaved drafts use a document-id hash namespace and migrate on first save. Autosave captures AI batches, deduplicating the latest content fingerprint. Existing pre-save backups remain readable. Read-only comparisons use snapshots; choosing a version preserves project identity, checkpointed current art, shared undo and human feedback, advances revision and invalidates acceptance reviews. No content generator is installed. Legacy effect metadata roundtrips as bounded inert JSON.
+
+## Storage maintenance
+
+`storage.py` previews bounded allowlisted cleanup plans with file hashes, fixed retention decisions and observed document/revision tokens. Apply re-evaluates protection and exact candidates before any unlink; no arbitrary paths or recursive removal are exposed. Plans/receipts are bounded in memory; retries return the original receipt. Partial failures report actual removals. Immutable artwork snapshots remain independent from cleanup metadata; pinned/latest versions, unsaved recovery, external originals and active review assets are protected. Project/version MCP pages and onboarding project summaries are bounded. `storage_ui.py` reads usage/previews on workers and applies only the selected validated plan through shared service dispatch.

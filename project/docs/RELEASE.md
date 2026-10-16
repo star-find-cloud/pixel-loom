@@ -10,6 +10,7 @@ python -m tests.mcp_reference_smoke
 python -m tests.mcp_quality_smoke
 python -m tests.mcp_feedback_smoke
 python -m tests.mcp_projects_smoke
+python -m tests.mcp_storage_smoke
 python -m tests.mcp_character_smoke
 python -m tests.gui_smoke
 python -m tests.gui_editing_smoke
@@ -18,6 +19,7 @@ python -m tests.gui_welcome_smoke
 python -m tests.gui_feedback_smoke
 python -m tests.gui_capture_smoke
 python -m tests.gui_projects_smoke
+python -m tests.gui_storage_smoke
 python -m tests.gui_character_smoke
 python tools/build_release.py --check
 python tools/build_release.py

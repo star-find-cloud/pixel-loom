@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import stat
 import uuid
 
 from .model import Document, PixelError, atomic_json
@@ -19,7 +20,22 @@ def path_key(path):
 
 
 def file_digest(path):
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    with Path(path).open('rb') as stream:
+        return hashlib.file_digest(stream, 'sha256').hexdigest()
+
+
+def checked_path(path, root):
+    """Reject redirects and paths outside the exact managed cleanup directory."""
+    path, root = Path(path).absolute(), Path(root).resolve()
+    if not path.is_relative_to(root):raise PixelError('Cleanup path is outside its managed directory')
+    for item in (path, *path.parents):
+        if item.exists() or item.is_symlink():
+            attributes = item.lstat()
+            if stat.S_ISLNK(attributes.st_mode) or getattr(attributes,'st_file_attributes',0) & 1024:
+                raise PixelError('Cleanup skips symbolic links and directory redirects')
+        if item == root:break
+    if not path.resolve().is_relative_to(root):raise PixelError('Cleanup path escaped its directory')
+    return path
 
 
 def frame_at(doc, time_ms):
@@ -36,6 +52,7 @@ class ProjectLibrary:
         self.runtime, self.workspace = Path(runtime), Path(workspace)
         self.catalog = self.runtime / 'project-library.json'
         self.entries = []
+        self.next_number = 1
         if self.catalog.exists():
             data = json.loads(self.catalog.read_text(encoding='utf-8'))
             if data.get('format') != 'pixel-loom/projects/v1' or not isinstance(data.get('projects'), list):
@@ -44,9 +61,10 @@ class ProjectLibrary:
             if any(not isinstance(entry,dict) or not re.fullmatch(r'[0-9a-f]{32}',str(entry.get('id','')))
                    or not isinstance(entry.get('path'),str) for entry in self.entries):
                 raise PixelError('Invalid project library entry; keep its file for recovery')
+            self.next_number=max(data.get('next_number',1),max((e.get('number',0) for e in self.entries),default=0)+1)
 
     def persist(self):
-        atomic_json(self.catalog, {'format': 'pixel-loom/projects/v1', 'projects': self.entries})
+        atomic_json(self.catalog, {'format': 'pixel-loom/projects/v1', 'projects': self.entries,'next_number':self.next_number})
 
     def by_path(self, path):
         return next((entry for entry in self.entries if path_key(entry['path']) == path_key(path)), None)
@@ -64,9 +82,10 @@ class ProjectLibrary:
         doc = doc or Document.open(path)
         entry = self.by_path(path)
         if entry is None:
-            entry = {'id': uuid.uuid4().hex, 'number': len(self.entries) + 1, 'path': str(path),
+            entry = {'id': uuid.uuid4().hex, 'number': self.next_number, 'path': str(path),
                      'parent_id': parent_id, 'created_at': datetime.now(timezone.utc).isoformat()}
             self.entries.append(entry)
+            self.next_number+=1
         entry.update(name=doc.name, document_id=doc.id, width=doc.width, height=doc.height,
                      frames=len(doc.durations), duration_ms=sum(doc.durations), disk_sha256=file_digest(path))
         entry.pop('deleted_at',None)  # Explicitly opening/adding its file restores the same project identity.
@@ -85,11 +104,12 @@ class ProjectLibrary:
             pending.rmdir()
         return entry
 
-    def listing(self, active_path=None, deleted=False):
+    def listing(self, active_path=None, deleted=False, page=None, limit=20):
         active = path_key(active_path) if active_path else None
+        entries=[e for e in self.entries if bool(e.get('deleted_at'))==deleted]
+        if page is not None:entries=entries[page*limit:(page+1)*limit]
         return [{**entry, 'active': path_key(entry['path']) == active,
-                 'available': Path(entry['path']).is_file()} for entry in self.entries
-                if bool(entry.get('deleted_at'))==deleted]
+                 'available': Path(entry['path']).is_file()} for entry in entries]
 
     def set_deleted(self, project_ids, deleted=True):
         if not isinstance(project_ids,list) or not 1<=len(project_ids)<=256 or any(not isinstance(key,str) for key in project_ids):
@@ -139,11 +159,16 @@ class ProjectLibrary:
                 previous_fingerprint = Document.open(previous[0]).fingerprint()
             if previous_fingerprint == doc.fingerprint():
                 return None  # Reads, view changes, repeated saves and retries are not new iterations.
+        number = len(previous)+1
+        if previous:
+            try:number = max(number,int(info.get('number',0))+1)
+            except (TypeError,ValueError,UnboundLocalError):pass
         stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
         target = folder / f'{stamp}-{uuid.uuid4().hex}.pixloom'
         doc.save(target)
         event = doc.events[-1] if doc.events else {}
         atomic_json(target.with_suffix('.json'), {
+            'number': number, 'pinned': False,
             'label': str(label or event.get('label') or '初始版本')[:200],
             'source': str(source or event.get('source') or '保存')[:80],
             'saved_at': datetime.now(timezone.utc).isoformat(), 'revision': doc.revision,
@@ -151,28 +176,55 @@ class ProjectLibrary:
             'duration_ms': sum(doc.durations), 'fingerprint': doc.fingerprint(), 'sha256': file_digest(target)})
         return target
 
-    def versions(self, project_id):
-        entry = self.get(project_id)
+    def versions(self, project_id, page=None, limit=20, include_deleted=False):
+        entry = self.get(project_id,include_deleted=include_deleted)
         folder = self.history_folder(entry)
         result = []
         paths = sorted(folder.glob('*.pixloom'))
-        for number, path in enumerate(paths, 1):
+        numbered = list(enumerate(paths,1))[::-1]
+        if page is not None:numbered = numbered[page*limit:(page+1)*limit]
+        for number, path in numbered:
             try:
                 info = json.loads(path.with_suffix('.json').read_text(encoding='utf-8'))
             except (OSError, ValueError):
                 info = {}
             if not isinstance(info,dict):info = {}
-            result.append({**info, 'id': path.stem, 'path': str(path), 'number': number,
+            stable_number = info.get('number',number)
+            if type(stable_number) is not int or stable_number<1:stable_number=number
+            result.append({**info, 'id': path.stem, 'path': str(path), 'number': stable_number,
+                           'pinned': info.get('pinned') is True,
                            'saved_at': info.get('saved_at', path.stem.split('-')[0]),
                            'label': info.get('label', '旧版保存备份'), 'source': info.get('source', '保存'),
                            'bytes': path.stat().st_size})
-        return result[::-1]
+        return result
+
+    def freeze_version_numbers(self, project_id, exclude=()):
+        for version in self.versions(project_id,include_deleted=True):
+            if version['id'] in exclude:continue
+            path=checked_path(version['path'],self.history_folder(self.get(project_id,include_deleted=True)))
+            metadata=path.with_suffix('.json')
+            checked_path(metadata,self.history_folder(self.get(project_id,include_deleted=True)))
+            try:info=json.loads(metadata.read_text(encoding='utf-8'))
+            except (OSError,ValueError):info={}
+            if not isinstance(info,dict):info={}
+            if info.get('number')!=version['number']:
+                atomic_json(metadata,{**info,'number':version['number']})
+
+    def pin_version(self, project_id, version_id, pinned):
+        if type(pinned) is not bool:raise PixelError('pinned must be boolean')
+        path=checked_path(self.version_path(project_id,version_id),self.history_folder(self.get(project_id)))
+        self.freeze_version_numbers(project_id)
+        metadata=checked_path(path.with_suffix('.json'),self.history_folder(self.get(project_id)))
+        info=json.loads(metadata.read_text(encoding='utf-8'))
+        atomic_json(metadata,{**info,'pinned':pinned})
+        return {'id':version_id,'pinned':pinned}
 
     def version_path(self, project_id, version_id):
-        candidates = [item for item in self.versions(project_id) if item['id'] == version_id]
-        if len(candidates) != 1:
+        if not isinstance(version_id,str) or not re.fullmatch(r'[0-9]{8}T[0-9]{12}Z-[0-9a-f]{32}(?:[0-9a-f]{32})?',version_id):
             raise PixelError('Saved version not found', code='VERSION_NOT_FOUND')
-        return Path(candidates[0]['path'])
+        path=self.history_folder(self.get(project_id))/f'{version_id}.pixloom'
+        if not path.is_file():raise PixelError('Saved version not found',code='VERSION_NOT_FOUND')
+        return checked_path(path,self.history_folder(self.get(project_id)))
 
     def backup(self, path, project_id=None):
         """Capture the existing file before any overwrite, deduplicated by its bytes."""

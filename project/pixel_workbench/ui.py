@@ -235,6 +235,7 @@ class DesktopUI:
                            relief="flat",font=SMALL,padx=10,pady=6)
         more_menu=tk.Menu(more,tearoff=False,bg=FIELD,fg=FG)
         for text,callback in [("检查成品",self.quality_dialog),("动画总览",self.overview_dialog),
+                              ("存储管理",self.storage_dialog),
                               ("检查更新",self.show_updates),
                               ("使用说明与支持作者",self.show_welcome),
                               ("MCP 首次接入配置",self.connection_dialog),("协作记录",self.activity_dialog),
@@ -605,6 +606,11 @@ class DesktopUI:
         self.dirty=self.service.dirty
         self.refresh()
         return HistoryDialog(self)
+
+    def storage_dialog(self,settings=None,on_cleanup=None):
+        from .storage_ui import StorageDialog
+        self.sync_service()
+        return StorageDialog(self,settings,on_cleanup)
 
     def compare_projects_dialog(self,project_ids=None):
         from .project_ui import ComparisonDialog

@@ -36,6 +36,8 @@ class ProjectManagerDialog:
         self.remove_button.pack(side='left',padx=8)
         self.restore_button=editor.button(footer,'恢复所选',self.restore_selected,True,font=SMALL)
         self.restore_button.pack(side='left')
+        self.purge_button=editor.button(footer,'彻底清理所选',self.purge_selected,font=SMALL)
+        self.purge_button.pack(side='left',padx=8)
         self.path_label=editor.label(d,'',MUTED,SMALL,wraplength=840,justify='left')
         self.path_label.pack(side='bottom',fill='x',padx=18,pady=(8,0))
         self.notebook=ttk.Notebook(d)
@@ -94,6 +96,7 @@ class ProjectManagerDialog:
         selected=self.selected_ids()
         self.remove_button.config(state='normal' if selected and not deleted else 'disabled')
         self.restore_button.config(state='normal' if selected and deleted else 'disabled')
+        self.purge_button.config(state='normal' if selected and deleted else 'disabled')
         self.open_button.config(state='normal' if len(selected)==1 and not deleted else 'disabled')
         if selected:
             entry=self.editor.service.projects.get(selected[0],include_deleted=True)
@@ -109,6 +112,11 @@ class ProjectManagerDialog:
 
     def restore_selected(self):
         if self.selected_ids() and self.is_deleted():return self.editor.project_action('undelete',project_ids=self.selected_ids())
+
+    def purge_selected(self):
+        if self.selected_ids() and self.is_deleted():
+            return self.editor.storage_dialog({'targets':['deleted_projects'],
+                'deleted_project_ids':self.selected_ids(),'older_than_days':0})
 
     def poll(self):
         self.poll_job=None
@@ -271,7 +279,8 @@ class HistoryDialog:
         self.project_id = entry['id']
         self.current = Document.from_dict(editor.doc.to_dict())
         self.observed = (editor.doc.id, editor.doc.revision)
-        self.versions = editor.service.projects.versions(self.project_id)
+        self.page=0
+        self.versions = []
         self.selected = None
         self.playing, self.job, self.elapsed = False, None, 0
         self.dialog = d = tk.Toplevel(editor.root)
@@ -282,12 +291,16 @@ class HistoryDialog:
         d.minsize(720, 540)
         editor.label(d, entry['name'], font=('Microsoft YaHei UI',13,'bold')).pack(anchor='w',padx=18,pady=(16,5))
         editor.label(d, 'AI 修改自动留档。选一版与当前效果比较，选用后继续编辑；其他版本仍保留。', MUTED, SMALL).pack(anchor='w',padx=18,pady=8)
-        self.listing = tk.Listbox(d,bg=BG,fg=FG,selectbackground=FIELD,relief='flat',font=SMALL,height=5,exportselection=False)
+        actions=tk.Frame(d,bg=PANEL)
+        actions.pack(fill='x',padx=18,pady=5)
+        editor.button(actions,'★ 保留 / 取消保留',self.pin_selected,font=SMALL).pack(side='left')
+        editor.button(actions,'删除所选旧版本',self.delete_selected,font=SMALL).pack(side='left',padx=5)
+        editor.button(actions,'上一页',lambda:self.turn(-1),font=SMALL).pack(side='right')
+        editor.button(actions,'下一页',lambda:self.turn(1),font=SMALL).pack(side='right',padx=5)
+        self.page_label=editor.label(actions,'',MUTED,SMALL)
+        self.page_label.pack(side='right',padx=8)
+        self.listing = tk.Listbox(d,bg=BG,fg=FG,selectbackground=FIELD,relief='flat',font=SMALL,height=5,exportselection=False,selectmode='extended')
         self.listing.pack(fill='x',padx=18)
-        for version in self.versions:
-            try:stamp = datetime.fromisoformat(version['saved_at']).astimezone().strftime('%m-%d %H:%M:%S')
-            except ValueError:stamp = version['saved_at'][:22]
-            self.listing.insert('end', f"第 {version['number']} 版 · {stamp} · {version['source']} · {version['label'][:70]}")
         pictures = tk.Frame(d,bg=PANEL)
         pictures.pack(fill='both',expand=True,padx=18,pady=10)
         self.views, self.details = [], []
@@ -313,9 +326,42 @@ class HistoryDialog:
         editor.button(controls,'刷新',self.reload,font=SMALL).pack(side='right',padx=6)
         self.listing.bind('<<ListboxSelect>>',self.show)
         d.bind('<Destroy>',self.cleanup,add='+')
+        self.refresh_versions()
+
+    def refresh_versions(self):
+        self.stop()
+        response=self.editor.service.projects_action({'action':'versions','project_id':self.project_id,'page':self.page})
+        if self.page>=response['pages']:
+            self.page=max(0,response['pages']-1)
+            return self.refresh_versions()
+        self.pages=response['pages']
+        self.versions=response['versions']
+        self.page_label.config(text=f"{self.page+1}/{self.pages} 页 · 共 {response['total']} 版")
+        self.listing.delete(0,'end')
+        for version in self.versions:
+            try:stamp = datetime.fromisoformat(version['saved_at']).astimezone().strftime('%m-%d %H:%M:%S')
+            except ValueError:stamp = version['saved_at'][:22]
+            self.listing.insert('end', f"{'★ ' if version['pinned'] else ''}第 {version['number']} 版 · {stamp} · {version['source']} · {version['label'][:70]}")
         if self.versions:
             self.listing.selection_set(0)
             self.show()
+
+    def turn(self,delta):
+        self.page=max(0,min(self.pages-1,self.page+delta))
+        self.refresh_versions()
+
+    def pin_selected(self):
+        selected=[self.versions[i] for i in self.listing.curselection()]
+        if not selected:return
+        pinned=not all(v['pinned'] for v in selected)
+        for version in selected:
+            if not self.editor.project_action('version_pin',project_id=self.project_id,version_id=version['id'],pinned=pinned):return
+        self.refresh_versions()
+
+    def delete_selected(self):
+        ids=[self.versions[i]['id'] for i in self.listing.curselection()]
+        if ids:return self.editor.storage_dialog({'targets':['versions'],'project_ids':[self.project_id],
+            'version_ids':ids,'older_than_days':0},on_cleanup=self.refresh_versions)
 
     def stop(self):
         self.playing = False

@@ -48,6 +48,8 @@ class DocumentService:
         self.motion = MotionManager()
         self.feedback = FeedbackManager()
         self.projects = ProjectLibrary(self.runtime, self.workspace)
+        from .storage import StorageManager
+        self.storage = StorageManager(self)
         self.restore_reference()
 
     def restore_reference(self):
@@ -140,13 +142,32 @@ class DocumentService:
             documents.append((dict(entry),doc))
         return documents
 
+    def project_listing(self):
+        from .storage import paged
+        total=sum(not e.get('deleted_at') for e in self.projects.entries)
+        listing=paged([None]*total)
+        return {'projects':self.projects.listing(self.path,page=0,limit=20),
+                'project_list_paging':{k:v for k,v in listing.items() if k!='items'}}
+
     def projects_action(self,payload):
         action=payload.get('action','list')
         if action in ('list','deleted'):
-            return {'ok':True,**self.state(),'projects':self.projects.listing(self.path,deleted=action=='deleted')}
+            from .storage import paged
+            total=sum(bool(e.get('deleted_at'))==(action=='deleted') for e in self.projects.entries)
+            listing=paged([None]*total,payload.get('page',0),payload.get('limit',20))
+            return {'ok':True,**self.state(),**{k:v for k,v in listing.items() if k!='items'},
+                    'projects':self.projects.listing(self.path,action=='deleted',listing['page'],listing['limit'])}
         if action=='versions':
+            from .storage import paged
+            from .model import integer
+            page=integer(payload.get('page',0),'page',0)
+            limit=integer(payload.get('limit',20),'limit',1,100)
+            entry=self.projects.get(payload.get('project_id'))
+            total=sum(1 for _ in self.projects.history_folder(entry).glob('*.pixloom'))
+            listing=paged([None]*total,page,limit)
             return {'ok':True,'project_id':payload.get('project_id'),
-                    'versions':self.projects.versions(payload.get('project_id'))}
+                    **{k:v for k,v in listing.items() if k!='items'},
+                    'versions':self.projects.versions(payload.get('project_id'),page,limit)}
         if action=='version_preview':
             entry = self.projects.get(payload.get('project_id'))
             doc = Document.open(self.projects.version_path(entry['id'], payload.get('version_id')))
@@ -187,6 +208,9 @@ class DocumentService:
             return {'ok':True,'read_only':True,'view':view,'page':page,'pages':pages,'time_ms':time_ms,
                     'projects':items,'images_png':images}
         self.guard(payload)
+        if action=='version_pin':
+            version=self.projects.pin_version(payload.get('project_id'),payload.get('version_id'),payload.get('pinned'))
+            return {'ok':True,**self.state(),'version':version}
         if action=='use_version':
             entry = self.projects.get(payload.get('project_id'))
             if not self.path or path_key(self.path) != path_key(entry['path']):
@@ -197,7 +221,7 @@ class DocumentService:
             self.restore_reference()
             self.autosave()
             self.save_project()
-            return {'ok':True,**self.state(),'projects':self.projects.listing(self.path),'history_preserved':True}
+            return {'ok':True,**self.state(),**self.project_listing(),'history_preserved':True}
         if action in ('remove','undelete'):
             project_ids=payload.get('project_ids') or [payload.get('project_id')]
             if not isinstance(project_ids,list) or not 1<=len(project_ids)<=256 or any(not isinstance(key,str) for key in project_ids):
@@ -215,7 +239,7 @@ class DocumentService:
                 self.checkpoint_current()
                 self.replace(*(destination or (Document(),None)))
             changed=self.projects.set_deleted([entry['id'] for entry in selected],deleted=action=='remove')
-            return {'ok':True,**self.state(),'projects':self.projects.listing(self.path),
+            return {'ok':True,**self.state(),**self.project_listing(),
                     'changed_project_ids':[entry['id'] for entry in changed],
                     'files_preserved':True,'history_preserved':True}
         if action=='register':
@@ -226,7 +250,7 @@ class DocumentService:
         elif action=='switch':
             entry=self.projects.get(payload.get('project_id'))
             if self.path is not None and path_key(entry['path'])==path_key(self.path):
-                return {'ok':True,**self.state(),'projects':self.projects.listing(self.path)}
+                return {'ok':True,**self.state(),**self.project_listing()}
             doc=Document.open(entry['path'])  # Validate destination before saving or replacing anything.
             self.checkpoint_current()
             self.replace(doc,entry['path'])
@@ -252,7 +276,7 @@ class DocumentService:
             self.save_project(target,parent_id=parent_id)
         else:
             raise PixelError('Unknown project library action')
-        return {'ok':True,**self.state(),'projects':self.projects.listing(self.path)}
+        return {'ok':True,**self.state(),**self.project_listing()}
 
     def replace(self, doc, path=None, discard_changes=False):
         if self.dirty and not discard_changes:
@@ -325,7 +349,9 @@ class DocumentService:
         return {"workspace": str(self.workspace), "projects_directory": str(self.workspace / "projects"),
                 "exports_directory": str(self.workspace / "exports"), "recovery_directory": str(self.runtime / "recovery"),
                 "recent_projects": [{"name": path.name, "path": str(path)} for path in projects[:20]],
-                "project_library":self.projects.listing(self.path),
+                "project_library":self.projects.listing(self.path,page=0,limit=20),
+                "project_library_paging":{"limit":20,"total":sum(not e.get('deleted_at') for e in self.projects.entries),
+                    "has_more":sum(not e.get('deleted_at') for e in self.projects.entries)>20,"tool":"pixel_projects(action='list', page=...)"},
                 "recovery_files": [{"name": path.name, "path": str(path)} for path in recoveries[:20]],
                 "path_rules": "Relative paths resolve inside workspace. Existing exports need overwrite=true. Save the current project before opening another."}
 
@@ -416,6 +442,12 @@ class DocumentService:
                 return png_bytes(image), "image/png"
             raise PixelError(f"Unknown read endpoint: {path}", code="NOT_FOUND")
 
+        if path == '/storage':
+            action=payload.get('action','status')
+            if action=='status':return self.storage.status(),JSON_TYPE
+            if action=='plan':return self.storage.plan(payload.get('settings'),payload.get('plan_id'),payload.get('page',0),payload.get('limit',20)),JSON_TYPE
+            if action=='apply':return self.storage.apply(payload),JSON_TYPE
+            raise PixelError('Unknown storage action')
         if path == "/character":
             from .character import action
             return action(self, payload), JSON_TYPE

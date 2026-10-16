@@ -21,6 +21,7 @@ jobs:
       - run: python -m tests.mcp_reference_smoke
       - run: python -m tests.mcp_quality_smoke
       - run: python -m tests.mcp_feedback_smoke
+      - run: python -m tests.mcp_storage_smoke
       - run: python -m tests.mcp_projects_smoke
       - run: python -m tests.mcp_character_smoke
       - run: python -m tests.gui_character_smoke
@@ -36,6 +37,8 @@ jobs:
       - run: python -m tests.gui_feedback_smoke
         if: runner.os == 'Windows'
       - run: python -m tests.gui_capture_smoke
+        if: runner.os == 'Windows'
+      - run: python -m tests.gui_storage_smoke
         if: runner.os == 'Windows'
       - run: python -m tests.gui_projects_smoke
         if: runner.os == 'Windows'
