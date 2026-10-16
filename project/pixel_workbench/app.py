@@ -1180,6 +1180,7 @@ class Editor(DesktopUI):
             window.dialog.lift()
             return {"ok":True,"presented":True,"playing":window.playing,"review_id":payload["review_id"]},"application/json; charset=utf-8"
         read_only_preview = path in ("/validate", "/reference/preview", "/review/evidence", "/motion/check") or (
+            path == "/effects" and payload.get("action", "presets") in ("presets", "preview")) or (
             path == "/character" and payload.get("action", "status") in ("status", "save")) or (
             path=="/feedback" and payload.get("action") in ("list","inspect")) or (
             path=='/projects' and payload.get('action','list') in ('list','deleted','versions','compare'))
@@ -1195,13 +1196,13 @@ class Editor(DesktopUI):
         self.saved_fingerprint = self.service.saved_fingerprint
         self.dirty = self.service.dirty
         switched=method=='POST' and (path in ('/new','/open','/import','/redraw/begin') or
-                 path=='/projects' and (self.doc.id,self.path)!=previous_identity)
+                 path in ('/projects', '/effects') and (self.doc.id,self.path)!=previous_identity)
         if switched:
             self.gesture=self.override=None
             self.path_points=[]
             self.selection_preview=None
             self.feedback_draft=self.feedback_focus=None
-            if path=='/projects':
+            if path in ('/projects', '/effects'):
                 for name in ('quality_window','reference_window'):
                     window=getattr(self,name,None)
                     if window and window.dialog.winfo_exists():window.dialog.destroy()

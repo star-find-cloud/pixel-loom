@@ -112,6 +112,7 @@ class Document:
         self.selection = None
         self.reference = None
         self.character = None
+        self.effect_recipe = None
         self.quality_policy = None
         self.quality_reviews = []
         self.feedback = []
@@ -148,6 +149,7 @@ class Document:
         from .character import summary as character_summary
         return {
             "character": character_summary(self.character),
+            "effect_recipe": copy.deepcopy(self.effect_recipe),
             "document_id": self.id, "name": self.name, "width": self.width,
             "height": self.height, "revision": self.revision,
             "coordinate_system": "Integer pixels, origin top-left; x grows right, y grows down. Rect width/height are sizes.",
@@ -184,6 +186,8 @@ class Document:
             data["reference"] = copy.deepcopy(self.reference)
         if self.character is not None:
             data["character_profile"] = copy.deepcopy(self.character)
+        if self.effect_recipe is not None:
+            data["effect_recipe"] = copy.deepcopy(self.effect_recipe)
         if self.quality_policy is not None:
             data["quality_policy"] = copy.deepcopy(self.quality_policy)
         if self.quality_reviews:
@@ -259,6 +263,12 @@ class Document:
         if data.get("character_profile") is not None:
             from .character import validate_profile
             doc.character = validate_profile(data["character_profile"], doc.width, doc.height)
+        if data.get("effect_recipe") is not None:
+            from .effects import settings as effect_settings
+            value = data["effect_recipe"]
+            if not isinstance(value, dict) or set(value) != {"format", "settings"} or value["format"] != "pixel-loom/effect/v1" or not isinstance(value["settings"], dict):
+                raise PixelError("Invalid effect recipe")
+            doc.effect_recipe = {"format": value["format"], "settings": effect_settings(value["settings"])}
         if data.get("quality_policy") is not None or data.get("quality_reviews"):
             from .quality import validate_policy, validate_records
             if data.get("quality_policy") is not None:
@@ -294,7 +304,7 @@ class Document:
         # Feedback is a human conversation, not paint history. Undo/redo must
         # never delete a report or restore an old answer from a drawing snapshot.
         for key in ("id", "name", "width", "height", "palette", "strict_palette", "durations",
-                    "layers", "active_layer", "active_frame", "regions", "stamps", "tags", "selection", "reference", "character", "quality_policy", "quality_reviews"):
+                    "layers", "active_layer", "active_frame", "regions", "stamps", "tags", "selection", "reference", "character", "effect_recipe", "quality_policy", "quality_reviews"):
             setattr(self, key, getattr(other, key))
 
     def _event(self, label, source, count):

@@ -383,6 +383,9 @@ class DocumentService:
         if path == "/character":
             from .character import action
             return action(self, payload), JSON_TYPE
+        if path == "/effects":
+            from .effects import action
+            return action(self, payload), JSON_TYPE
         if path == "/motion/check":
             if self.view.get("gesture_active"):
                 raise PixelError("Finish the active canvas gesture first", "GESTURE_ACTIVE")

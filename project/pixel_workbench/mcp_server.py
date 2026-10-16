@@ -19,6 +19,7 @@ from .reference import ReferenceSettings
 from .quality import QualitySettings, VisualCheck, WarningResolution
 from .feedback import FeedbackShape
 from .character import CharacterSettings
+from .effects import EffectSettings
 
 server = FastMCP("Pixel Loom", instructions=(
     "Pixel-art/animation editor shared with the human. Start with pixel_onboard. "
@@ -43,6 +44,8 @@ server = FastMCP("Pixel Loom", instructions=(
     "Before final delivery call pixel_review, inspect actual frames/timing/reference images, repair defects with pixel_edit "
     "and recheck. Submit specific conclusions with pixel_review_submit. Numeric checks alone never certify aesthetics. "
     "Final exports require a current passing review; draft=true is only for explicitly unreviewed intermediates. "
+    "pixel_effect generates editable pixel VFX: arc slash, lightning, magic aura, fire and explosion/sparks. Preview real frames/timing first, "
+    "then create an independent saved project with observed tokens; the outgoing project is checkpointed. "
     "Use pixel_character to inspect/capture a reusable approved pose, palette, fixed regions and multi-view references. "
     "Before animation edits inspect that specification and fork the project. pixel_motion_check returns concrete suspect frames "
     "and paged before/current/after evidence; inspect all pages, never blindly erase decorations or declare artistic quality from metrics. "
@@ -92,7 +95,7 @@ def pixel_onboard() -> CallToolResult:
 @server.tool(annotations=READ, structured_output=False)
 @safe
 def pixel_help(topic: str = "overview", operation: str | None = None) -> CallToolResult:
-    """Read focused help: operations/drawing/transform/selection/layers/animation/palette/canvas/library/character/motion.
+    """Read focused help: operations/drawing/transform/selection/layers/animation/palette/canvas/library/effects/character/motion.
 
     Supply operation='polygon' (or another op) for its exact JSON Schema and example. Does not start the editor.
     """
@@ -100,6 +103,9 @@ def pixel_help(topic: str = "overview", operation: str | None = None) -> CallToo
         from .feedback_capture import GUIDE_PATH,FORMAT,PNG_KEY,VISIBLE_MARKER
         return result({"topic":"feedback_images","format":FORMAT,"png_property":PNG_KEY,
                        "visible_marker":VISIBLE_MARKER,"guide":GUIDE_PATH.read_text(encoding="utf-8")})
+    if topic == "effects" and operation is None:
+        return result({"topic": topic, **onboarding()["pixel_effects"],
+                       "example": {"action": "preview", "settings": {"preset": "fire", "size": 64, "frames": 16, "duration_ms": 80}}})
     if topic in ("character", "motion") and operation is None:
         return result({"topic": topic, **onboarding()["character_motion"],
                        "tools": ["pixel_character", "pixel_motion_check"],
@@ -242,6 +248,28 @@ def pixel_review_submit(review_id: str, visual_checks: list[VisualCheck], method
 def reference_result(data):
     images = [ImageContent(type="image", data=encoded, mimeType="image/png") for encoded in data.pop("images_png", [])]
     return result(data, images)
+
+
+@server.tool(annotations=EDIT, structured_output=False)
+@safe
+def pixel_effect(action: Literal["presets", "preview", "create"] = "presets", settings: EffectSettings | None = None,
+                 name: str | None = None, include_images: bool = True, expected_document_id: str | None = None,
+                 expected_revision: int | None = None) -> CallToolResult:
+    """Generate editable transparent pixel effects; no external image-generation API required.
+
+    presets lists slash/lightning/burst (one-shot, repeated in preview), magic aura and fire (loops). preview returns actual
+    ALL-frame contact image and a draft GIF path without modifying current art/history/playback.
+    Settings: preset, square size 24–128, frames 8–32, duration_ms 30–500, strength 1–100,
+    opaque primary hex color and deterministic seed 0–999999. Missing fields use preset defaults;
+    omit settings entirely to reuse the current effect project's saved original recipe when available.
+    create requires observed document_id/revision; it checkpoints existing work and creates a NEW
+    saved independent .pixloom, with three editable layers, palette, cels and native undo operations.
+    Recipe changes always create a variant, preserving manual corrections in earlier projects.
+    Inspect/play the actual output and use pixel_review before final export; preview GIF is a draft.
+    """
+    return reference_result(ensure_editor().request("/effects", {"action": action, "settings": settings,
+        "name": name, "include_images": include_images, "expected_document_id": expected_document_id,
+        "expected_revision": expected_revision}, timeout=120))
 
 
 @server.tool(annotations=EDIT, structured_output=False)

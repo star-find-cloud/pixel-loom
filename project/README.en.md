@@ -4,7 +4,7 @@
 
 An editable local pixel-art and frame-animation workbench for humans and AI agents. A native desktop window and standard MCP clients share layers, cels, palette, named regions and undo history.
 
-Version **0.7.8 is a local preview; the published GitHub release remains 0.7.7**. Desktop behavior is tested on Windows. A headless backend and cross-platform CI configuration are included; other desktop platforms have not been fully validated.
+Version **0.7.9 is a local preview; the published GitHub release remains 0.7.7**. Desktop behavior is tested on Windows. A headless backend and cross-platform CI configuration are included; other desktop platforms have not been fully validated.
 
 This is the `project/` source subproject. The complete handoff starts with the parent `README.md`; development commands here run in this directory, next to `pyproject.toml`. Formal tests remain in `tests/`; generated test projects, logs and build caches are excluded.
 
@@ -38,7 +38,7 @@ Portable MCP command: absolute `PixelLoomMCP.exe`, with argument `--mcp`.
 
 Reload MCP in the client, then call **`pixel_onboard`**. It returns the live project, workspace, rules and a runnable native-drawing recipe. No model API key is required by this application; the connected host supplies model reasoning.
 
-The server exposes 22 tools, 44 validated native operations, three resources and four prompts. Tool argument schemas, validation and focused help derive from one registry. A distributable agent skill is in `skills/pixel-loom/SKILL.md`.
+The server exposes 23 tools, 44 validated native operations, three resources and four prompts. Tool argument schemas, validation and focused help derive from one registry. A distributable agent skill is in `skills/pixel-loom/SKILL.md`.
 
 ## Capabilities
 
@@ -96,7 +96,7 @@ Open **导入参考** in the desktop. Import an ordinary PNG/JPEG/WebP/BMP/GIF a
 
 Style images are optional user/client imports or embedded project references; none are bundled. The style row shows the source and offers import/replace, view and clear. A different source clears the previous style while preserving old project references. Style images do not affect automatic draft sampling.
 
-`pixel_reference` returns actual source/style/draft/artwork images and can dry-run native edits in comparison. `pixel_reference_setup` imports/configures references with observed reference/document tokens. `pixel_redraw_begin(mode="draft")` creates the editable automatic draft by default, protecting unsaved artwork. Explicit `mode="redraw"` supplies layered artistic redraw with an optional locked seed. The `redraw_reference` prompt explains the artistic workflow. Reconnect existing MCP clients to discover these tools. There are 22 tools, 44 native operations and four prompts.
+`pixel_reference` returns actual source/style/draft/artwork images and can dry-run native edits in comparison. `pixel_reference_setup` imports/configures references with observed reference/document tokens. `pixel_redraw_begin(mode="draft")` creates the editable automatic draft by default, protecting unsaved artwork. Explicit `mode="redraw"` supplies layered artistic redraw with an optional locked seed. The `redraw_reference` prompt explains the artistic workflow. Reconnect existing MCP clients to discover these tools. There are 23 tools, 44 native operations and four prompts.
 
 The draft is only quantization/resampling; the connected AI authors proportions, silhouettes and color clusters with native drawing operations. The editor does not autonomously invoke external AI. GUI overlays do not alter exported pixels. References embed in saved .pixloom projects; no original-image path is required after moving a project. Stored references normalize EXIF and sides to at most 1024 pixels; crop uses those coordinates. Local files up to 50 MB / 40 million pixels are accepted.
 
@@ -122,3 +122,11 @@ Timeline playback speed: choose 0.25×–4× next to Play. Changes take effect w
 ## Startup guide and optional creator support
 
 The desktop opens a short usage guide. Enter, Escape and closing the dialog all allow normal use. The optional support page offers CNY 5/10/15/20 and shows the matching original WeChat receipt image supplied by the maintainer. It never sends a payment request, checks payment status or gates features. Reopen it from More. Headless MCP is unchanged. Receipt images and their amount mapping live in `pixel_workbench/resources/support/`.
+
+## Editable pixel effects (0.7.9 local preview)
+
+**More → Pixel effects** provides arc slash, lightning, magic aura, fire and explosion/sparks in one visual dialog. Adjust the primary color, strength, size, frame count and frame interval, play the preview or inspect every frame, then Generate new project. The main canvas gains no permanent panel. Existing work is checkpointed and each result is a separate saved project, with three ordinary editable layers, its palette, native frame cels, action tag and original generation recipe. Regeneration creates a variant and preserves manual edits in earlier projects. Advanced character/motion tools remain searchable through Ctrl+K.
+
+MCP uses `pixel_effect(action="presets")`, then `preview(settings={"preset":"fire","size":64,"frames":16,"duration_ms":80})`. Inspect the actual all-frame contact image and local draft GIF before `create` with observed document/revision tokens. Preview does not change artwork, history, selection or playback. Settings are `preset` (`slash`, `lightning`, `magic`, `fire`, `burst`), `size` 24–128, `frames` 8–32, `duration_ms` 30–500, `strength` 1–100, opaque primary hex `color`, and deterministic `seed` 0–999999. An explicit partial settings object uses preset defaults; omit settings entirely to reuse the current project's saved original recipe when present. `pixel_help(topic="effects")` and onboarding describe the same workflow.
+
+Effects are parameterized native pixel operations, not a language model or an external image-generation API. Crisp edges use binary alpha; layers and every frame can be hand-edited or changed through pixel_edit, with shared undo. Fire and magic aura are designed as loops. Burst, lightning and slash are single actions repeatedly played in previews; configure one-shot playback in the consuming game engine. Recipe settings retain their original generation size after manual resizing and never silently rerender painted changes. Use the existing pixel_review visual/timing workflow and save before final PNG/sheet+JSON/GIF export. Preview GIFs are explicitly drafts and do not constitute artistic approval.

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.9 — local preview: editable pixel VFX
+
+- Add one visual Pixel effects entry with arc slash, lightning, magic aura, fire and explosion/sparks. Color, strength, size, frame count and timing update a background-built preview and optional all-frame overview.
+- Generate a new saved independent project while checkpointing current work. Results use ordinary native palette/layer/frame/stamp operations; pixels, layers and frames remain editable and undoable.
+- Preserve the original bounded deterministic recipe in projects. Regeneration creates variants and never overwrites manual corrections.
+- Add pixel_effect with typed settings, read-only presets/preview and guarded create. Actual all-frame images and draft GIF evidence are returned. No external generation API is required.
+- Move advanced character/motion entry to command search to keep the main menu focused.
+- Add source/frozen MCP, model/persistence/export and asynchronous GUI regression coverage.
+
+
 ## 0.7.8 — local preview: reusable characters and visual motion checks
 
 - Keep the main canvas unchanged; add one on-demand More → Character and motion window.
