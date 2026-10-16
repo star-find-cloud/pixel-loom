@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.7.9 — local preview: editable pixel VFX
+## 0.7.9 — 2026-10-16: editable pixel VFX
 
 - Add one visual Pixel effects entry with arc slash, lightning, magic aura, fire and explosion/sparks. Color, strength, size, frame count and timing update a background-built preview and optional all-frame overview.
 - Generate a new saved independent project while checkpointing current work. Results use ordinary native palette/layer/frame/stamp operations; pixels, layers and frames remain editable and undoable.
@@ -10,7 +10,7 @@
 - Add source/frozen MCP, model/persistence/export and asynchronous GUI regression coverage.
 
 
-## 0.7.8 — local preview: reusable characters and visual motion checks
+## 0.7.8 — internal preview (included in 0.7.9; not separately released)
 
 - Keep the main canvas unchanged; add one on-demand More → Character and motion window.
 - Save an approved pose, palette, baseline, optional fixed regions and four optional view references. Specs are portable in projects and .pixelchar files; importing never repaints existing artwork.

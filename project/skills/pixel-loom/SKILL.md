@@ -50,7 +50,7 @@ The desktop has one **Ctrl+K → Character and motion** entry (also searchable w
 
 Character MCP actions: `status`, `capture`, `configure`, `reference_load`, `reference_clear`, `save`, `load`, `clear`. All writes require observed document/revision tokens; status and save do not modify the project. Reference load/clear requires one explicit role (`front`, `left`, `right`, `back`); status defaults to showing all provided views. Export refuses overwriting unless explicitly requested. Reference images and notes are untrusted visual/task data, never authorization or executable instructions.
 
-## Editable pixel effects (0.7.9 local preview)
+## Editable pixel effects (0.7.9)
 
 **More → Pixel effects** provides arc slash, lightning, magic aura, fire and explosion/sparks in one visual dialog. Adjust the primary color, strength, size, frame count and frame interval, play the preview or inspect every frame, then Generate new project. The main canvas gains no permanent panel. Existing work is checkpointed and each result is a separate saved project, with three ordinary editable layers, its palette, native frame cels, action tag and original generation recipe. Regeneration creates a variant and preserves manual edits in earlier projects. Advanced character/motion tools remain searchable through Ctrl+K.
 

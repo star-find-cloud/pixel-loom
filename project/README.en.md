@@ -4,7 +4,7 @@
 
 An editable local pixel-art and frame-animation workbench for humans and AI agents. A native desktop window and standard MCP clients share layers, cels, palette, named regions and undo history.
 
-Version **0.7.9 is a local preview; the published GitHub release remains 0.7.7**. Desktop behavior is tested on Windows. A headless backend and cross-platform CI configuration are included; other desktop platforms have not been fully validated.
+Version **0.7.9 is a public preview**. Desktop behavior is tested on Windows. A headless backend and cross-platform CI configuration are included; other desktop platforms have not been fully validated.
 
 This is the `project/` source subproject. The complete handoff starts with the parent `README.md`; development commands here run in this directory, next to `pyproject.toml`. Formal tests remain in `tests/`; generated test projects, logs and build caches are excluded.
 
@@ -123,7 +123,7 @@ Timeline playback speed: choose 0.25×–4× next to Play. Changes take effect w
 
 The desktop opens a short usage guide. Enter, Escape and closing the dialog all allow normal use. The optional support page offers CNY 5/10/15/20 and shows the matching original WeChat receipt image supplied by the maintainer. It never sends a payment request, checks payment status or gates features. Reopen it from More. Headless MCP is unchanged. Receipt images and their amount mapping live in `pixel_workbench/resources/support/`.
 
-## Editable pixel effects (0.7.9 local preview)
+## Editable pixel effects (0.7.9)
 
 **More → Pixel effects** provides arc slash, lightning, magic aura, fire and explosion/sparks in one visual dialog. Adjust the primary color, strength, size, frame count and frame interval, play the preview or inspect every frame, then Generate new project. The main canvas gains no permanent panel. Existing work is checkpointed and each result is a separate saved project, with three ordinary editable layers, its palette, native frame cels, action tag and original generation recipe. Regeneration creates a variant and preserves manual edits in earlier projects. Advanced character/motion tools remain searchable through Ctrl+K.
 

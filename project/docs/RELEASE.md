@@ -10,6 +10,8 @@ python -m tests.mcp_reference_smoke
 python -m tests.mcp_quality_smoke
 python -m tests.mcp_feedback_smoke
 python -m tests.mcp_projects_smoke
+python -m tests.mcp_character_smoke
+python -m tests.mcp_effects_smoke
 python -m tests.gui_smoke
 python -m tests.gui_editing_smoke
 python -m tests.gui_updates_smoke
@@ -17,6 +19,8 @@ python -m tests.gui_welcome_smoke
 python -m tests.gui_feedback_smoke
 python -m tests.gui_capture_smoke
 python -m tests.gui_projects_smoke
+python -m tests.gui_character_smoke
+python -m tests.gui_effects_smoke
 python tools/build_release.py --check
 python tools/build_release.py
 python -m build
@@ -52,8 +56,10 @@ Include README, LICENSE and dependency notices in the folder archive. Keep relea
 
 ## Publishing releases for update checks
 
-Desktop checks read the public releases list for `yangsir2077/pixel-loom`; no user authentication is required. Use a semantic version tag such as `v0.7.8`, write release notes and attach `pixel-loom-0.7.8-windows-x64.zip`. The matching Windows archive must be uploaded before the download button becomes available. Draft releases are ignored. Public previews are included by default for 0.x builds and clearly marked in the update window; users can choose the stable-only channel.
+Desktop checks read the public releases list for `yangsir2077/pixel-loom`; no user authentication is required. Use a semantic version tag such as `v0.7.9`, write release notes and attach `pixel-loom-0.7.9-windows-x64.zip`. The matching Windows archive must be uploaded before the download button becomes available. Draft releases are ignored. Public previews are included by default for 0.x builds and clearly marked in the update window; users can choose the stable-only channel.
 
 Existing installations without update checking must upgrade manually once. New builds query public version metadata only, in a background desktop thread. Preferences/cache stay in the per-user runtime and are not part of the distributable. Headless MCP never performs automatic checks. Keep release versions and Windows archive names consistent so clients can find the correct download.
 
 Publishing, code signing, automatic installation, store submission and external GitHub CI execution are separate release actions and have not been performed by these local build commands.
+
+Each published version gets its own immutable semantic tag and GitHub Release with versioned source/Windows archives, checksums and a validation report. Preserve earlier release assets and tags. Version 0.7.8 was an internal preview included in 0.7.9; do not invent a separate 0.7.8 release. Push and verify the exact source commit in CI before publishing a new release.

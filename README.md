@@ -1,16 +1,16 @@
 # Pixel Loom · 像素织机
 
-**本地预览 0.7.9 · Windows 便携版 · 使用者和 AI 的统一入口**
+**0.7.9 公开测试版 · Windows 便携版 · 使用者和 AI 的统一入口**
 
-[下载 Windows 0.7.7 便携版](https://github.com/yangsir2077/pixel-loom/releases/download/v0.7.7/pixel-loom-0.7.7-windows-x64.zip) · [版本说明与校验值](https://github.com/yangsir2077/pixel-loom/releases/tag/v0.7.7) · [反馈问题](https://github.com/yangsir2077/pixel-loom/issues)
+[下载 Windows 0.7.9 便携版](https://github.com/yangsir2077/pixel-loom/releases/download/v0.7.9/pixel-loom-0.7.9-windows-x64.zip) · [版本说明与校验值](https://github.com/yangsir2077/pixel-loom/releases/tag/v0.7.9) · [反馈问题](https://github.com/yangsir2077/pixel-loom/issues)
 
 这是一个人和 AI 共用画布、图层、动画与撤销记录的本地像素编辑器。普通使用不需要打开源码或测试文件，也不需要单独安装 Python。
 
-本地 0.7.9 新增 **更多 → 像素特效**：选择弧形斩击、闪电电弧、魔法光环、循环火焰或爆炸火花，调整颜色、强度、画布尺寸、帧数和速度，即时预览后生成独立的可编辑项目。焰体／亮芯／火星等分别保存在普通图层，生成后仍能手动画每一帧；支持原有 PNG、精灵表和 GIF 导出。
+0.7.9 新增 **更多 → 像素特效**：选择弧形斩击、闪电电弧、魔法光环、循环火焰或爆炸火花，调整颜色、强度、画布尺寸、帧数和速度，即时预览后生成独立的可编辑项目。焰体／亮芯／火星等分别保存在普通图层，生成后仍能手动画每一帧；支持原有 PNG、精灵表和 GIF 导出。
 
 AI 调用 `pixel_effect` 可列出预设、查看实际全部帧与动态预览，再生成新项目。生成会先保存当前作品，各种效果或参数变化互相独立。参数化特效不调用外部生图服务。角色规范与动作检查保留在 Ctrl+K 命令搜索中，按需使用。
 
-本地预览尚未发布，下面的 GitHub 下载仍为 0.7.7。
+历史版本独立保留：[0.7.7](https://github.com/yangsir2077/pixel-loom/releases/tag/v0.7.7) · [0.7.6](https://github.com/yangsir2077/pixel-loom/releases/tag/v0.7.6)。0.7.8 是内部预览，相关功能已包含在 0.7.9，没有单独发布。
 
 ## 1. 先打开应用
 
