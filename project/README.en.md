@@ -4,7 +4,7 @@
 
 An editable local pixel-art and frame-animation workbench for humans and AI agents. A native desktop window and standard MCP clients share layers, cels, palette, named regions and undo history.
 
-Version **0.7.7 is a public preview**. Desktop behavior is tested on Windows. A headless backend and cross-platform CI configuration are included; other desktop platforms have not been fully validated.
+Version **0.7.8 is a local preview; the published GitHub release remains 0.7.7**. Desktop behavior is tested on Windows. A headless backend and cross-platform CI configuration are included; other desktop platforms have not been fully validated.
 
 This is the `project/` source subproject. The complete handoff starts with the parent `README.md`; development commands here run in this directory, next to `pyproject.toml`. Formal tests remain in `tests/`; generated test projects, logs and build caches are excluded.
 
@@ -38,7 +38,7 @@ Portable MCP command: absolute `PixelLoomMCP.exe`, with argument `--mcp`.
 
 Reload MCP in the client, then call **`pixel_onboard`**. It returns the live project, workspace, rules and a runnable native-drawing recipe. No model API key is required by this application; the connected host supplies model reasoning.
 
-The server exposes 20 tools, 43 validated native operations, three resources and four prompts. Tool argument schemas, validation and focused help derive from one registry. A distributable agent skill is in `skills/pixel-loom/SKILL.md`.
+The server exposes 22 tools, 44 validated native operations, three resources and four prompts. Tool argument schemas, validation and focused help derive from one registry. A distributable agent skill is in `skills/pixel-loom/SKILL.md`.
 
 ## Capabilities
 
@@ -96,7 +96,7 @@ Open **导入参考** in the desktop. Import an ordinary PNG/JPEG/WebP/BMP/GIF a
 
 Style images are optional user/client imports or embedded project references; none are bundled. The style row shows the source and offers import/replace, view and clear. A different source clears the previous style while preserving old project references. Style images do not affect automatic draft sampling.
 
-`pixel_reference` returns actual source/style/draft/artwork images and can dry-run native edits in comparison. `pixel_reference_setup` imports/configures references with observed reference/document tokens. `pixel_redraw_begin(mode="draft")` creates the editable automatic draft by default, protecting unsaved artwork. Explicit `mode="redraw"` supplies layered artistic redraw with an optional locked seed. The `redraw_reference` prompt explains the artistic workflow. Reconnect existing MCP clients to discover these tools. There are 20 tools, 43 native operations and four prompts.
+`pixel_reference` returns actual source/style/draft/artwork images and can dry-run native edits in comparison. `pixel_reference_setup` imports/configures references with observed reference/document tokens. `pixel_redraw_begin(mode="draft")` creates the editable automatic draft by default, protecting unsaved artwork. Explicit `mode="redraw"` supplies layered artistic redraw with an optional locked seed. The `redraw_reference` prompt explains the artistic workflow. Reconnect existing MCP clients to discover these tools. There are 22 tools, 44 native operations and four prompts.
 
 The draft is only quantization/resampling; the connected AI authors proportions, silhouettes and color clusters with native drawing operations. The editor does not autonomously invoke external AI. GUI overlays do not alter exported pixels. References embed in saved .pixloom projects; no original-image path is required after moving a project. Stored references normalize EXIF and sides to at most 1024 pixels; crop uses those coordinates. Local files up to 50 MB / 40 million pixels are accepted.
 

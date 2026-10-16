@@ -4,7 +4,7 @@
 
 一个人和 AI 共用画布、图层、动画与撤销记录的本地像素画／序列帧编辑器。你可以手动画；支持 MCP 的 AI 客户端（Codex、Claude Desktop 等）通过标准 **MCP / stdio** 直接调用原生绘图工具，不需要模拟鼠标画画。免费开源，采用 [MIT](LICENSE) 许可。
 
-**当前版本 0.7.7，公开测试版。** Windows 桌面端经过本机测试；其他平台可从源码运行，桌面适配尚未完整验证。
+**本地版本 0.7.8，预览版；GitHub 已发布版本仍为 0.7.7。** Windows 桌面端经过本机测试；其他平台可从源码运行，桌面适配尚未完整验证。
 
 这是 `project/` 源码子项目。整份交付的使用入口在上一级 `README.md`；本文的“仓库根目录”和开发命令均指包含 `pyproject.toml` 的本目录。`tests/` 是保留给开源维护的正式测试，不是本地测试产物；临时工程、日志和构建缓存不随交付分发。
 
@@ -244,3 +244,7 @@ python tools/build_release.py --check
 Windows 便携版由 `tools/package_windows.py` 构建，作为 GitHub Releases 附件发布，避免把整套运行库塞进源码历史。本地构建输出（`app/`、`dist/`、`build/`）已由 `.gitignore` 排除。
 
 程序代码采用 [MIT](LICENSE)；便携版内的运行库保留各自许可证，见 Release 包中的 `THIRD_PARTY_NOTICES.md` 和 `THIRD_PARTY_LICENSES/`。使用者导入的参考与作品不因此变成此项目可分发的素材。
+
+### 角色与动作（0.7.8 本地预览）
+
+“更多 → 角色与动作”提供角色规范与逐帧检查。保存认可的造型和可选多视角参考；动作项目继承同一份规范。点击检查线索可定位帧，观察前后图，再清理选中的残点；可撤销，不自动删除。MCP 对应 `pixel_character` 和 `pixel_motion_check`，详细流程见 [AI 使用指南](docs/AI_GUIDE.md#character-specifications-and-motion-checks-078-local-preview)。

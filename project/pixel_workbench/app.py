@@ -1179,7 +1179,8 @@ class Editor(DesktopUI):
             self.root.deiconify()
             window.dialog.lift()
             return {"ok":True,"presented":True,"playing":window.playing,"review_id":payload["review_id"]},"application/json; charset=utf-8"
-        read_only_preview = path in ("/validate", "/reference/preview", "/review/evidence") or (
+        read_only_preview = path in ("/validate", "/reference/preview", "/review/evidence", "/motion/check") or (
+            path == "/character" and payload.get("action", "status") in ("status", "save")) or (
             path=="/feedback" and payload.get("action") in ("list","inspect")) or (
             path=='/projects' and payload.get('action','list') in ('list','deleted','versions','compare'))
         view_only = path == "/command" and bool(payload.get("ops")) and all(

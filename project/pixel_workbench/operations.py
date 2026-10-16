@@ -156,6 +156,8 @@ op("reference_context", "reference", "Set portable reference context as one undo
    ("data",), {"data": {"type": "object"}}, {"op": "reference_context", "data": {}})
 op("quality_policy", "quality", "Set acceptance requirements as undoable metadata. Prefer pixel_review_settings for typed fields; changing requirements invalidates earlier reviews.",
    ("data",), {"data": {"type": "object"}}, {"op": "quality_policy", "data": {}})
+op("character_profile", "character", "Set/clear portable approved character metadata in one undo step. Prefer pixel_character for validated capture, references and import/export.",
+   ("data",), {"data": {"anyOf": [{"type": "object"}, {"type": "null"}]}}, {"op": "character_profile", "data": None})
 
 
 @lru_cache(maxsize=None)
@@ -211,7 +213,7 @@ def python_type(schema):
     elif "anyOf" in schema:
         result = Union[tuple(python_type(item) for item in schema["anyOf"])]
     else:
-        result = {"integer": StrictInt, "string": StrictStr, "boolean": StrictBool}.get(schema.get("type"))
+        result = {"integer": StrictInt, "string": StrictStr, "boolean": StrictBool, "null": type(None)}.get(schema.get("type"))
         if schema.get("type") == "array":
             result = list[python_type(schema["items"])]
         elif schema.get("type") == "object":

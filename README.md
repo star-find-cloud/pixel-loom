@@ -1,10 +1,17 @@
 # Pixel Loom · 像素织机
 
-**0.7.7 · Windows 便携版 · 使用者和 AI 的统一入口**
+**本地预览 0.7.8 · Windows 便携版 · 使用者和 AI 的统一入口**
 
 [下载 Windows 0.7.7 便携版](https://github.com/yangsir2077/pixel-loom/releases/download/v0.7.7/pixel-loom-0.7.7-windows-x64.zip) · [版本说明与校验值](https://github.com/yangsir2077/pixel-loom/releases/tag/v0.7.7) · [反馈问题](https://github.com/yangsir2077/pixel-loom/issues)
 
 这是一个人和 AI 共用画布、图层、动画与撤销记录的本地像素编辑器。普通使用不需要打开源码或测试文件，也不需要单独安装 Python。
+
+本地 0.7.8 新增 **更多 → 角色与动作**，主画布保持简洁：
+
+- **角色规范**：保存认可的造型、色板、落地基准和可选固定部位；按需导入正面、左侧、右侧、背面参考。规范随工程保存，也可导出 `.pixelchar` 复用。
+- **动作检查**：逐帧查找新增孤立像素、固定部位变化、颜色偏移和突变，点击线索查看前一帧／当前帧／后一帧并定位。只有明确选中的小块才可清理，一次撤销即可恢复。
+
+AI 先用 `pixel_character` 读取规范与图片，再用 `pixel_motion_check` 查看全部分页证据。检查提供线索，仍需实际观察动画；不会自动认定自然合格。本地预览尚未发布，下面的 GitHub 下载仍为 0.7.7。
 
 ## 1. 先打开应用
 

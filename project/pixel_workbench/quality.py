@@ -119,6 +119,8 @@ def required_criteria(doc, policy, frames):
                 {"id": "color_detail", "label": "配色、明暗与局部细节是否协调"}]
     if doc.reference and doc.reference.get("subject"):
         criteria.append({"id": "reference_match", "label": "主体特征与要求的参考画风是否吻合"})
+    if doc.character:
+        criteria.append({"id": "character_consistency", "label": "与角色规范对照，脸部、配色和各视角特征是否一致"})
     if len(frames)>1:
         criteria += [{"id": "motion", "label": "动作是否自然，衣物是否出现贴片平移、断接或抖动"},
                      {"id": "timing", "label": "按真实帧时长观察，节奏和循环过渡是否合适"}]
@@ -368,6 +370,11 @@ class QualityManager:
             for key in ("subject","style"):
                 if doc.reference.get(key):
                     sheets.append((key+"_reference",decoded_asset(doc.reference[key]["png"])))
+        if page == 0 and doc.character:
+            from .reference import decoded_asset
+            sheets.append(("character_pose", decoded_asset(doc.character["pose"]["png"])))
+            for key, item in doc.character["views"].items():
+                sheets.append(("character_" + key, decoded_asset(item["png"])))
         if mark_seen:
             ticket["seen"].add(page)
         data = {"ok":True,"review_id":ticket["id"],"document_id":doc.id,"revision":doc.revision,
@@ -377,6 +384,11 @@ class QualityManager:
                 "review_status":"visual_review_required","next_action":"Inspect all evidence pages and real timing; fix via pixel_edit, then recheck; submit conclusions with pixel_review_submit.",
                 "honesty":"Frames/timing evidence is not direct playback. Report the method actually used. Numeric success alone is not an artistic pass."}
         data["sampling_notice"]="Timing sheets sample equal elapsed intervals and can miss short poses; inspect the complete contact sheets and playable loop too."
+        if doc.character:
+            from .character import summary as character_summary
+            data["character_spec"] = character_summary(doc.character)
+        if len(scope["frames"]) > 1:
+            data["motion_diagnostics"] = "Before concluding, call pixel_motion_check and inspect all pages of suspect frame/ROI evidence. Apply only chosen, visually confirmed repairs; rerun after editing. These clues do not certify natural motion."
         data["existing_review_status"]=ticket["stored_record"]["status"] if ticket["stored_record"] else None
         data["previous_reviews"]=[{"status":r["status"],"summary":r["summary"],"round":r["round"],
             "remaining_findings":[c for c in r["visual_checks"] if c["verdict"]!="pass"]} for r in doc.quality_reviews[-3:]]

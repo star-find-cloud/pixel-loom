@@ -44,6 +44,8 @@ class DocumentService:
             path.mkdir(parents=True, exist_ok=True)
         self.references = ReferenceWorkspace(self.runtime / "reference-workspace.json")
         self.quality = QualityManager(self.runtime)
+        from .motion import MotionManager
+        self.motion = MotionManager()
         self.feedback = FeedbackManager()
         self.projects = ProjectLibrary(self.runtime, self.workspace)
         self.restore_reference()
@@ -378,6 +380,13 @@ class DocumentService:
                 return png_bytes(image), "image/png"
             raise PixelError(f"Unknown read endpoint: {path}", code="NOT_FOUND")
 
+        if path == "/character":
+            from .character import action
+            return action(self, payload), JSON_TYPE
+        if path == "/motion/check":
+            if self.view.get("gesture_active"):
+                raise PixelError("Finish the active canvas gesture first", "GESTURE_ACTIVE")
+            return self.motion.check(self.doc, payload), JSON_TYPE
         if path=='/projects':
             return self.projects_action(payload),JSON_TYPE
         if path == "/feedback":

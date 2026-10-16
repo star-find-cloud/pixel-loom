@@ -175,7 +175,8 @@ class QualityDialog:
 
     def refresh_evidence(self):
         data,self.sheets=self.editor.service.quality.evidence(self.ticket,self.page,mark_seen=False)
-        self.sheet_labels={"frame_contact":"帧对照","two_loop_timing":"真实时序 · 两次循环","loop_seam":"循环首尾","subject_reference":"原图参考","style_reference":"画风参考"}
+        self.sheet_labels={"frame_contact":"帧对照","two_loop_timing":"真实时序 · 两次循环","loop_seam":"循环首尾","subject_reference":"原图参考","style_reference":"画风参考",
+                           "character_pose":"角色基准造型", "character_front":"角色正面", "character_left":"角色左侧", "character_right":"角色右侧", "character_back":"角色背面"}
         choices=["部位放大 · "+role[7:] if role.startswith("detail:") else self.sheet_labels.get(role,role) for role in data["image_roles"]]
         menu=self.sheet_menu["menu"]
         menu.delete(0,"end")

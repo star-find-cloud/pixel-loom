@@ -111,6 +111,7 @@ class Document:
         self.tags = {}
         self.selection = None
         self.reference = None
+        self.character = None
         self.quality_policy = None
         self.quality_reviews = []
         self.feedback = []
@@ -144,7 +145,9 @@ class Document:
         return result
 
     def state(self):
+        from .character import summary as character_summary
         return {
+            "character": character_summary(self.character),
             "document_id": self.id, "name": self.name, "width": self.width,
             "height": self.height, "revision": self.revision,
             "coordinate_system": "Integer pixels, origin top-left; x grows right, y grows down. Rect width/height are sizes.",
@@ -179,6 +182,8 @@ class Document:
         }
         if self.reference is not None:
             data["reference"] = copy.deepcopy(self.reference)
+        if self.character is not None:
+            data["character_profile"] = copy.deepcopy(self.character)
         if self.quality_policy is not None:
             data["quality_policy"] = copy.deepcopy(self.quality_policy)
         if self.quality_reviews:
@@ -251,6 +256,9 @@ class Document:
         if data.get("reference") is not None:
             from .reference import validate_context
             doc.reference = validate_context(data["reference"])
+        if data.get("character_profile") is not None:
+            from .character import validate_profile
+            doc.character = validate_profile(data["character_profile"], doc.width, doc.height)
         if data.get("quality_policy") is not None or data.get("quality_reviews"):
             from .quality import validate_policy, validate_records
             if data.get("quality_policy") is not None:
@@ -286,7 +294,7 @@ class Document:
         # Feedback is a human conversation, not paint history. Undo/redo must
         # never delete a report or restore an old answer from a drawing snapshot.
         for key in ("id", "name", "width", "height", "palette", "strict_palette", "durations",
-                    "layers", "active_layer", "active_frame", "regions", "stamps", "tags", "selection", "reference", "quality_policy", "quality_reviews"):
+                    "layers", "active_layer", "active_frame", "regions", "stamps", "tags", "selection", "reference", "character", "quality_policy", "quality_reviews"):
             setattr(self, key, getattr(other, key))
 
     def _event(self, label, source, count):
@@ -493,6 +501,9 @@ class Document:
         self.regions = {name: result for name, rect in self.regions.items() if (result := transform(rect))}
         if self.selection:
             self.selection = transform(self.selection)
+        if self.character:
+            from .character import resized
+            self.character = resized(self.character, width, height, transform, dx, dy, scale)
 
     def execute(self, op):
         if not isinstance(op, dict):
@@ -695,6 +706,10 @@ class Document:
         if kind == "reference_context":
             from .reference import validate_context
             self.reference = validate_context(op["data"])
+            return
+        if kind == "character_profile":
+            from .character import validate_profile
+            self.character = validate_profile(op["data"], self.width, self.height) if op["data"] is not None else None
             return
         if kind == "quality_policy":
             from .quality import validate_policy

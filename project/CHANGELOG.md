@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.8 — local preview: reusable characters and visual motion checks
+
+- Keep the main canvas unchanged; add one on-demand More → Character and motion window.
+- Save an approved pose, palette, baseline, optional fixed regions and four optional view references. Specs are portable in projects and .pixelchar files; importing never repaints existing artwork.
+- Add pixel_character and pixel_motion_check MCP tools with focused help and onboarding. Forked actions inherit the character spec. Metadata changes are undoable and canvas resizing transforms it consistently.
+- Scan every frame for suspect new tiny islands, fixed-part/color drift, empty frames and abrupt transitions. Return exact frames/ROIs and immutable paged before/current/after images.
+- Offer exact-pixel cleanup only for an explicitly selected unlocked tiny island, in one undo step. Changed artwork invalidates old reports and cleanup. No automatic artistic pass or bulk erasure.
+- Include approved character images and consistency criterion in final visual review. Add unit, real two-client MCP and asynchronous Tk workflow tests.
+
+
 ## 0.7.7 — release checks and download reminders
 
 - Add More → Check for updates and a searchable command. Version checks run in a background thread so editing and MCP remain responsive.

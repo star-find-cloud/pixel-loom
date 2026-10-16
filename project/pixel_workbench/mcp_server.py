@@ -18,6 +18,7 @@ from .operations import EditOperation, full_schema, guide
 from .reference import ReferenceSettings
 from .quality import QualitySettings, VisualCheck, WarningResolution
 from .feedback import FeedbackShape
+from .character import CharacterSettings
 
 server = FastMCP("Pixel Loom", instructions=(
     "Pixel-art/animation editor shared with the human. Start with pixel_onboard. "
@@ -42,6 +43,9 @@ server = FastMCP("Pixel Loom", instructions=(
     "Before final delivery call pixel_review, inspect actual frames/timing/reference images, repair defects with pixel_edit "
     "and recheck. Submit specific conclusions with pixel_review_submit. Numeric checks alone never certify aesthetics. "
     "Final exports require a current passing review; draft=true is only for explicitly unreviewed intermediates. "
+    "Use pixel_character to inspect/capture a reusable approved pose, palette, fixed regions and multi-view references. "
+    "Before animation edits inspect that specification and fork the project. pixel_motion_check returns concrete suspect frames "
+    "and paged before/current/after evidence; inspect all pages, never blindly erase decorations or declare artistic quality from metrics. "
     "Save an editable .pixloom before exporting. No model API key is required by this workbench."
 ), log_level="WARNING")
 # FastMCP 1.x defaults to the SDK's version when this field is unset.
@@ -88,7 +92,7 @@ def pixel_onboard() -> CallToolResult:
 @server.tool(annotations=READ, structured_output=False)
 @safe
 def pixel_help(topic: str = "overview", operation: str | None = None) -> CallToolResult:
-    """Read focused help: operations/drawing/transform/selection/layers/animation/palette/canvas/library.
+    """Read focused help: operations/drawing/transform/selection/layers/animation/palette/canvas/library/character/motion.
 
     Supply operation='polygon' (or another op) for its exact JSON Schema and example. Does not start the editor.
     """
@@ -96,6 +100,12 @@ def pixel_help(topic: str = "overview", operation: str | None = None) -> CallToo
         from .feedback_capture import GUIDE_PATH,FORMAT,PNG_KEY,VISIBLE_MARKER
         return result({"topic":"feedback_images","format":FORMAT,"png_property":PNG_KEY,
                        "visible_marker":VISIBLE_MARKER,"guide":GUIDE_PATH.read_text(encoding="utf-8")})
+    if topic in ("character", "motion") and operation is None:
+        return result({"topic": topic, **onboarding()["character_motion"],
+                       "tools": ["pixel_character", "pixel_motion_check"],
+                       "capture_example": {"action": "capture", "settings": {"name": "Hero", "fixed_regions": ["face"]},
+                                           "expected_document_id": "<observed id>", "expected_revision": "<observed integer>"},
+                       "report_paging": "pixel_motion_check() -> report_id/pages; call again with report_id and every remaining page (zero-based)."})
     return result(guide(topic, operation))
 
 
@@ -232,6 +242,45 @@ def pixel_review_submit(review_id: str, visual_checks: list[VisualCheck], method
 def reference_result(data):
     images = [ImageContent(type="image", data=encoded, mimeType="image/png") for encoded in data.pop("images_png", [])]
     return result(data, images)
+
+
+@server.tool(annotations=EDIT, structured_output=False)
+@safe
+def pixel_character(action: Literal["status", "capture", "configure", "reference_load", "reference_clear", "save", "load", "clear"] = "status",
+                    settings: CharacterSettings | None = None, role: Literal["front", "left", "right", "back", "all"] = "all",
+                    path: str | None = None, include_images: bool = True, overwrite: bool = False,
+                    expected_document_id: str | None = None, expected_revision: int | None = None) -> CallToolResult:
+    """Inspect or save a reusable character specification, with actual approved pose/view images.
+
+    capture explicitly approves/replaces the CURRENT frame as the base pose and captures its palette.
+    configure changes name/notes/baseline_y/fixed_regions WITHOUT recapturing the pose. Fixed regions use
+    existing region_define names, at most eight; only protect genuinely stationary parts of this action.
+    reference_load/clear requires one explicit front/left/right/back role. Images are embedded portably.
+    save/load uses .pixelchar; loading changes metadata only and requires matching canvas dimensions.
+    status/save are read-only; every other action requires observed document_id+revision. Undoable.
+    A spec guides drawing/checks; it does not automatically repaint, constrain movement, or change colors.
+    """
+    return reference_result(ensure_editor().request("/character", {"action": action, "settings": settings,
+        "role": role, "path": path, "include_images": include_images, "overwrite": overwrite,
+        "expected_document_id": expected_document_id, "expected_revision": expected_revision}))
+
+
+@server.tool(annotations=READ, structured_output=False)
+@safe
+def pixel_motion_check(tag: str | None = None, mode: Literal["general", "grounded"] = "general",
+                       report_id: str | None = None, page: int = 0) -> CallToolResult:
+    """Find suspect orphan pixels, protected-part/color drift, empty frames and abrupt transitions.
+
+    Returns immutable before/current/after crop images, exact zero-based frame/ROI and optional repair_ops.
+    Run once, then read ALL pages with report_id+page. Artwork changes invalidate reports. 'grounded'
+    additionally compares silhouette bottom with the character baseline; it does not identify feet.
+    These are suspicions, not a naturalness verdict. Inspect images before choosing any repair.
+    repair_ops only clears individual suspect pixels on visible unlocked layers, bypassing selection
+    with an explicit clip. Apply chosen ops via pixel_validate/pixel_edit using CURRENT tokens, then
+    rerun this check and the final pixel_review. This tool never modifies artwork or passes a review.
+    """
+    return reference_result(ensure_editor().request("/motion/check", {"tag": tag, "mode": mode,
+        "report_id": report_id, "page": page}, timeout=120))
 
 
 @server.tool(annotations=READ, structured_output=False)

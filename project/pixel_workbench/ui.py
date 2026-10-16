@@ -234,7 +234,7 @@ class DesktopUI:
         more=tk.Menubutton(top,text="更多 ▾",bg=FIELD,fg=FG,activebackground=EDGE,activeforeground=FG,
                            relief="flat",font=SMALL,padx=10,pady=6)
         more_menu=tk.Menu(more,tearoff=False,bg=FIELD,fg=FG)
-        for text,callback in [("检查成品",self.quality_dialog),("动画总览",self.overview_dialog),
+        for text,callback in [("角色与动作",self.character_dialog),("检查成品",self.quality_dialog),("动画总览",self.overview_dialog),
                               ("检查更新",self.show_updates),
                               ("使用说明与支持作者",self.show_welcome),
                               ("MCP 首次接入配置",self.connection_dialog),("协作记录",self.activity_dialog),
@@ -619,6 +619,15 @@ class DesktopUI:
         self.reference_window = ReferenceDialog(self)
         return self.reference_window
 
+    def character_dialog(self):
+        from .character_ui import CharacterDialog
+        existing = getattr(self, "character_window", None)
+        if existing and existing.dialog.winfo_exists():
+            existing.dialog.lift()
+            return existing
+        self.character_window = CharacterDialog(self)
+        return self.character_window
+
     def quality_dialog(self,review_id=None):
         from .quality_ui import QualityDialog
         self.stop_play()
@@ -973,6 +982,7 @@ class DesktopUI:
         commands = [(f"{name}   [{key}]", lambda t=tool: self.choose_tool(t)) for tool, (name, key, _) in TOOL_INFO.items()]
         commands += [("适应画布  [F]", self.fit), ("另存为  [Ctrl Shift S]", self.save_as), ("新建工程", self.new_dialog),
                      ("检查更新 · 新版本与下载", self.show_updates),
+                     ("角色与动作 · 造型规范 / 逐帧检查",self.character_dialog),
                      ("成品自检 · 证据 / 循环播放 / AI结论",self.quality_dialog),
                      ("图片转像素 · 参考图 / MCP 重绘", self.reference_dialog),
                      ("导出素材", self.export_dialog), ("调整画布", self.resize_dialog), ("多帧总览", self.overview_dialog),
