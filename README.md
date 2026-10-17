@@ -1,12 +1,16 @@
 # Pixel Loom · 像素织机
 
+## [⬇ 下载 Windows 便携版 · 0.7.13](https://github.com/yangsir2077/pixel-loom/releases/download/v0.7.13/pixel-loom-0.7.13-windows-x64.zip)
+
+下载后**完整解压**，双击 **打开像素织机.cmd** 即可使用，无需安装 Python。
+
+[查看发布页、版本说明与校验值](https://github.com/yangsir2077/pixel-loom/releases/tag/v0.7.13) · [使用说明](#1-先打开应用) · [反馈问题](https://github.com/yangsir2077/pixel-loom/issues)
+
+> **想直接使用，请点上面的 Windows 下载链接。** 本页的 `git clone`、**Code → Download ZIP**、`*-source.zip` 和 **Source code** 下载的是源码，不包含可直接运行的 `app` 文件夹或 exe。
+
 **0.7.13 公开测试版 · Windows 便携版 · 使用者和 AI 的统一入口**
 
 新增按需去背景：**导入参考 → 去背景**。原图/效果预览、点背景、强度调整、保护区域、应用/撤销/重做及透明 PNG 导出；默认导入和转换不自动抠图。AI 可从 MCP 内置说明发现并使用。
-
-[下载 Windows 0.7.13 便携版](https://github.com/yangsir2077/pixel-loom/releases/download/v0.7.13/pixel-loom-0.7.13-windows-x64.zip) · [版本说明与校验值](https://github.com/yangsir2077/pixel-loom/releases/tag/v0.7.13) · [反馈问题](https://github.com/yangsir2077/pixel-loom/issues)
-
-**直接使用软件：点上面的 Windows 便携版下载。** `git clone`、GitHub 的 **Code → Download ZIP**、`*-source.zip` 和 **Source code** 下载的是源码，不包含可直接运行的 `app` 文件夹或 exe。
 
 这是一个面向 AI 的像素创作工具，也是供用户查看、创作和修改作品的可视化编辑器。AI 通过 MCP 和配套说明使用通用绘图与动画工具；用户直观看结果、手动修细节，并使用导入、保存和导出等基础功能。普通使用不需要打开源码或测试文件，也不需要单独安装 Python。
 
