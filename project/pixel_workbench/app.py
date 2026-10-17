@@ -560,6 +560,10 @@ class Editor(DesktopUI):
             self.button(frame, "删除分组", lambda: (self.apply([{"op": "tag_delete", "name": name.get()}], "删除动作分组"), dialog.destroy())).grid(row=5, column=0)
         place_dialog(dialog, self.root, 530, 380)
 
+    def workflow_dialog(self):
+        from .workflow_ui import show
+        return show(self)
+
     def help_dialog(self):
         dialog = tk.Toplevel(self.root)
         dialog.title("Pixel Loom · 使用指南与恢复")
@@ -1177,7 +1181,7 @@ class Editor(DesktopUI):
             self.root.deiconify()
             window.dialog.lift()
             return {"ok":True,"presented":True,"playing":window.playing,"review_id":payload["review_id"]},"application/json; charset=utf-8"
-        read_only_preview = path in ("/validate", "/reference/preview", "/reference/cutout/preview", "/review/evidence", "/motion/check") or (
+        read_only_preview = path in ("/task", "/validate", "/reference/preview", "/reference/cutout/preview", "/review/evidence", "/motion/check") or (
             path == '/reference/cutout' and payload.get('action') == 'export') or (
             path == '/storage' and payload.get('action','status') in ('status','plan')) or (
             path == "/character" and payload.get("action", "status") in ("status", "save")) or (

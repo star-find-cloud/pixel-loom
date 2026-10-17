@@ -2,6 +2,10 @@
 
 Read pixel_help(topic="workflow") first. Design motion for the current brief; this guide contains no object preset or finished artwork coordinates.
 
+## Before animation from a flattened image
+
+Animation needs the human's request. Choose animation from compact onboarding and preserve a different action in a fork. Read decomposition_workflow for merged source images. Analyze structure, occlusion, joints and grips; separate visible objects, inspect each isolated part and restored composite first. Hidden completion is a separate requested scope: if movement needs missing surfaces, clarify before painting them. Static conversion also needs clean visible-object layers, but no animation trial or hidden filling. Matching rest pixels does not certify correct ownership. pixel_task records brief, parts and next_action without art/history changes; frame-0 part checks complement the full-frame review below.
+
 ## 1. Define the motion contract
 
 Specify fixed parts, anchors, moving parts, extent, frame durations and whether motion loops. Keep static geometry/highlights/labels fixed unless the intended material calls for movement. Do not move an entire object layer when only one internal part should change.

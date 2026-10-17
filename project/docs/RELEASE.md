@@ -7,6 +7,7 @@ python -m pip install -e ".[dev]"
 python -m unittest discover -s tests -v
 python -m tests.mcp_public_smoke
 python -m tests.mcp_creation_smoke
+python -m tests.mcp_task_smoke
 python -m tests.mcp_reference_smoke
 python -m tests.mcp_cutout_smoke
 python -m tests.mcp_quality_smoke
@@ -22,6 +23,8 @@ python -m tests.gui_welcome_smoke
 python -m tests.gui_feedback_smoke
 python -m tests.gui_capture_smoke
 python -m tests.gui_projects_smoke
+python -m tests.gui_project_navigation_smoke
+python -m tests.gui_workflow_smoke
 python -m tests.gui_storage_smoke
 python -m tests.gui_character_smoke
 python tools/build_release.py --check

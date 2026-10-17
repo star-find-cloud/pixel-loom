@@ -70,6 +70,9 @@ class ProjectLibrary:
         return next((entry for entry in self.entries if path_key(entry['path']) == path_key(path)), None)
 
     def get(self, project_id, include_deleted=False):
+        if project_id is None:
+            raise PixelError('An observed project_id is required; it is not the document_id.',code='PROJECT_NOT_FOUND',
+                recovery='Read pixel_status(compact=True).project_library.active.id for the current saved project, or pixel_projects(action="list"); pass that project_id. Save/register an unsaved project before reading its retained versions.')
         entry = next((entry for entry in self.entries if entry['id'] == project_id), None)
         if entry is None:
             raise PixelError('Project not found. Read pixel_projects list.', code='PROJECT_NOT_FOUND')

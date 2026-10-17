@@ -1,28 +1,38 @@
 # AI 使用指南 / Agent guide
 
-Connect through a standard stdio MCP client. Start with **`pixel_onboard`**. The server supplies its own workflow, workspace paths, current artwork, limits and a runnable native-drawing recipe.
+Connect through a standard stdio MCP client. Start with **`pixel_onboard(task=..., compact=True)`** and follow its `read_next`. No external workflow document is required. No-argument calls retain the full legacy view and optional API examples.
 
 The editor starts its local service automatically. There is no AI tab, activation switch or creation form for the user to complete. Standard MCP hosts still need one-time server registration. The human's Preview mode hides both sidebars; screenshot and manual tools appear in their respective modes. Use the advertised tools and resources directly without asking the human to open an AI panel.
 
-## Bundled creation methods (0.7.12)
+## Bundled task routing (0.7.14)
 
 New MCP sessions receive workflow discovery in initialization instructions and `pixel_onboard.creation_workflow`. Follow its machine-readable `read_next` tool/arguments:
 
-- `pixel_help(topic="workflow")`: brief/specification, preservation, silhouette/color design, layer responsibility, native batches and observed revisions.
+- `pixel_help(topic="workflow")`: choose text_static, image_static, edit_static, layer_completion or animation from the real human request. Static first; no implicit completion or animation.
+- `text_workflow` / `image_workflow`: static native creation or faithful conversion, both with meaningful editable visible-object layers. Retain background separately unless removal is requested.
+- `decomposition_workflow`: inspect structure/occlusion/ownership; separate clean visible parts and view isolated layers plus composite. Pixel equality does not prove semantic separation. Hidden=unfilled is valid static extraction.
+- `completion_workflow`: only requested layers, matching original palette ramps, resolution, light/shadow transitions and detail density. Animation alone does not authorize hidden painting.
 - `pixel_help(topic="animation_workflow")`: fixed/moving parts, anchors, timing/phase, clean cels, optional host-side geometry/constraint calculations, residue prevention and all-frame inspection.
 - `pixel_help(topic="inspection_workflow")`: actual frame/detail/timing/seam images, diagnostic paging, repairs with fresh evidence, honest pass/fail/uncertain findings and scoped final export.
 
 These read-only calls do not start or edit a document and do not require a local README or another file from the human. Clients supporting resources may instead read `pixel-loom://workflow`. Existing drawing, animation and finish prompts also point to the relevant methods. The full guides are packaged resources, including in the portable executable.
 
+`pixel_preview(layers=[observed_layer_id])` shows an isolated layer, even when hidden. A list shows a selected group in original order/opacity. It never changes live visibility, active cel, history or artwork; omit `layers` for the normal visible composite. Use normal-size and enlarged images for the decomposition checks. The editor does not automatically infer anatomy or perform semantic segmentation; these are explicit instructions for the connected AI's visual analysis.
+
 Use native operations directly or let the host compute coordinates/ops. Pixel Loom does not execute arbitrary Python/JavaScript or contain an art model; host computation is optional and image viewing is required for visual judgments. This is a general design/check workflow, not a preset library. Do not automatically instantiate examples or import external finished images while claiming native creation. Keep conversion-only drafts faithful unless the human explicitly requests redraw.
 
 The isolated `tests.mcp_creation_smoke` verifies discovery from fresh protocol clients, native drawing/clean-frame motion, actual image decoding, failed verdict/repair/stale evidence and final exports. It is a protocol regression, not a benchmark proving every external AI model understands art or produces the same quality.
+
+`pixel_task` stores a bounded local brief/stage/part checks/next_action. Plan on the intended document (image_static AFTER the faithful draft), with both observed artwork tokens and task_revision. Parts replace the complete list. clean/complete requires a current whole-layer isolated PNG; the AI must actually view it. Changed pixels make checks stale. Notes add no artwork undo/version steps, stay local and do not travel with a copied .pixloom. Old projects need no new task records to remain usable. Clear removes notes only.
+
+Use compact=True for onboard/status/edit/validate/projects; request full state only for details needed now. Returned tokens avoid repeated polling. Conditional status requires document_id plus if_revision, and still refreshes workflow_context. Conditional preview if_image_key omits a duplicate already-viewed image; changed pixels/frame/ROI/opacity/scale invalidate it. Native region_copy polygon/holes can transfer masked original pixels without huge pixel-by-pixel calls. Fetch exact fields via pixel_help(operation=...). These reduce transferred bytes/calls, not a promise of exact model-token savings or artistic quality. The optional desktop More → AI 工作流与进度 shows notes and bundled guides; no mandatory panel is added.
 
 ## Tool reference
 
 | Tool | Result |
 | --- | --- |
 | `pixel_onboard` | First-use guide, current project and a working example |
+| `pixel_task` | Bounded local task brief, scope, part checks and next action without changing artwork/history |
 | `pixel_projects` | Numbered retained works, fork/new/switch, saved versions, non-destructive restore and paired frame evidence |
 | `pixel_help` | Focused operation schemas/examples or an operation catalog |
 | `pixel_character` | Portable approved pose/palette/fixed regions/views; actual images; .pixelchar import/export |

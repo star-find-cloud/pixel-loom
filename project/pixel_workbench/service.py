@@ -13,7 +13,8 @@ import uuid
 from PIL import Image
 
 from . import __version__
-from .model import Document, PixelError, atomic_json, hexcolor
+from .model import Document, PixelError, atomic_json, hexcolor, integer
+from .workflow import TaskStore, capabilities, compact_state, part_key
 from .operations import full_schema, guide
 from .paths import RUNTIME, WORKSPACE
 from .reference import ReferenceWorkspace, decoded_asset, encode_png, load_asset, make_draft, new_redraw_document
@@ -39,6 +40,9 @@ class DocumentService:
         self.mode = mode
         self.saved_fingerprint = self.doc.fingerprint()
         self.requests = OrderedDict()
+        self.tasks = TaskStore(self.runtime)
+        self.preview_cache = OrderedDict()
+        self.part_receipts = OrderedDict()
         self.closing = False
         self.view = {"playing": False, "gesture_active": False}
         for path in (self.workspace / "projects", self.workspace / "exports", self.runtime / "recovery"):
@@ -65,7 +69,10 @@ class DocumentService:
     def state(self):
         reference = self.references.summary(self.doc)
         reference["cutout"].update(self.cutouts.status(self.doc.id, self.references.context))
-        return {**self.doc.state(), "app_version": __version__, "project_path": str(self.path) if self.path else None,
+        try:context=self.tasks.status(self.doc,brief=True)
+        except PixelError as error:context={'error':str(error),'code':error.code}
+        return {**self.doc.state(), "capabilities":capabilities(),"workflow_context":context,
+                "app_version": __version__, "project_path": str(self.path) if self.path else None,
                 "unsaved_changes": self.dirty, "editor": {"mode": self.mode, **self.view},
                 "workspace": str(self.workspace), "reference_workflow": reference,
                 "quality_review": self.quality.summary(self.doc), "feedback": feedback_summary(self.doc),
@@ -510,7 +517,12 @@ class DocumentService:
             if path == "/feedback":
                 return self.feedback_action({"action": "list"}), JSON_TYPE
             if path == "/state":
-                return self.state(), JSON_TYPE
+                if value('if_revision') is not None and value('document_id')==self.doc.id and int(value('if_revision'))==self.doc.revision:
+                    return {'document_id':self.doc.id,'revision':self.doc.revision,'unchanged':True,'capabilities':capabilities(),
+                            'workflow_context':self.tasks.status(self.doc,brief=True)},JSON_TYPE
+                state=self.state()
+                return (compact_state(state) if value('compact')=='1' else state), JSON_TYPE
+            if path == '/task':return {'ok':True,**self.tasks.status(self.doc)},JSON_TYPE
             if path == "/schema":
                 if value("format") == "json-schema":
                     return full_schema(), JSON_TYPE
@@ -526,12 +538,45 @@ class DocumentService:
             if path in ("/preview.png", "/snapshot"):
                 rect = [int(item) for item in value("rect").split(",")] if value("rect") else None
                 frame = int(value("frame")) if value("frame") is not None else None
-                image = self.doc.preview(frame, int(value("scale", 8)), rect, value("checker", "1") != "0")
+                try:
+                    layers = json.loads(value("layers")) if value("layers") is not None else None
+                except (ValueError, TypeError) as exc:
+                    raise PixelError("layers must be a JSON array of layer ids or names") from exc
+                frame=self.doc.active_frame if frame is None else integer(frame,'frame',0,len(self.doc.durations)-1)
+                scale=integer(int(value('scale',8)),'scale',1,32)
+                if rect is not None:self.doc.validate_rect(rect)
+                selected=self.doc.rendering_layers(layers)
+                scope={'document_id':self.doc.id,'size':[self.doc.width,self.doc.height],'frame':frame,'scale':scale,
+                       'rect':rect,'checker':value('checker','1')!='0','layers':[l.id for l in selected] if layers is not None else None}
+                digest=hashlib.sha256(json.dumps(scope,sort_keys=True).encode())
+                for layer in selected:digest.update(part_key(self.doc,layer.id,frame).encode())
+                image_key=digest.hexdigest()
+                unchanged=path=='/snapshot' and value('if_image_key')==image_key
+                encoded=None
+                if not unchanged:
+                    encoded=self.preview_cache.get(image_key)
+                    if encoded is None:
+                        image=self.doc.preview(frame,scale,rect,scope['checker'],layers=layers)
+                        encoded=png_bytes(image)
+                        if len(encoded)<=8_000_000:self.preview_cache[image_key]=encoded
+                    else:self.preview_cache.move_to_end(image_key)
+                    while len(self.preview_cache)>16 or sum(map(len,self.preview_cache.values()))>16_000_000:self.preview_cache.popitem(last=False)
+                if layers is not None and len(selected)==1:
+                    layer=selected[0];bbox=layer.cels[frame].getchannel('A').getbbox()
+                    complete=rect is None or bbox is None or (rect[0]<=bbox[0] and rect[1]<=bbox[1] and rect[0]+rect[2]>=bbox[2] and rect[1]+rect[3]>=bbox[3])
+                    receipt=(self.doc.id,layer.id,frame)
+                    if complete and (not unchanged or self.part_receipts.get(receipt)==part_key(self.doc,layer.id,frame)):
+                        self.part_receipts[receipt]=part_key(self.doc,layer.id,frame)
+                        self.part_receipts.move_to_end(receipt)
+                        while len(self.part_receipts)>256:self.part_receipts.popitem(last=False)
                 if path == "/snapshot":
                     return {"document_id": self.doc.id, "revision": self.doc.revision,
-                            "frame": self.doc.active_frame if frame is None else frame, "scale": int(value("scale", 8)),
-                            "preview_png": base64.b64encode(png_bytes(image)).decode("ascii")}, JSON_TYPE
-                return png_bytes(image), "image/png"
+                            "frame":frame,"scale":scale,"image_key":image_key,"unchanged":unchanged,
+                            "layers": [layer.id for layer in selected] if layers is not None else None,
+                            "image_roles": ["isolated_layer" if layers is not None and len(selected) == 1 else
+                                            "selected_layer_group" if layers is not None else "visible_composite"],
+                            **({'preview_png':base64.b64encode(encoded).decode('ascii')} if encoded is not None else {})}, JSON_TYPE
+                return encoded, "image/png"
             if path in ("/contact-sheet.png", "/contact-snapshot"):
                 frames = [int(item) for item in value("frames").split(",")] if value("frames") else None
                 image = self.doc.contact_sheet(frames, value("tag"), int(value("columns", 6)),
@@ -555,6 +600,11 @@ class DocumentService:
             if self.view.get("gesture_active"):
                 raise PixelError("Finish the active canvas gesture first", "GESTURE_ACTIVE")
             return self.motion.check(self.doc, payload), JSON_TYPE
+        if path=='/task':
+            if payload.get('action','status')=='status':return {'ok':True,**self.tasks.status(self.doc)},JSON_TYPE
+            self.guard(payload)
+            result=self.tasks.update(self.doc,payload,self.part_receipts,self.quality)
+            return {'ok':True,'document_id':self.doc.id,'revision':self.doc.revision,**result},JSON_TYPE
         if path=='/projects':
             return self.projects_action(payload),JSON_TYPE
         if path == "/feedback":
@@ -653,6 +703,7 @@ class DocumentService:
             draft = payload.get("draft",False)
             if not isinstance(draft,bool):
                 raise PixelError("draft must be boolean")
+            if not draft:self.tasks.check_delivery(self.doc)
             record = None if draft else self.quality.require_pass(self.doc,payload.get("tag"),payload.get("layers"),
                                                                  self.doc.active_frame if kind=="png" else None)
             doc = self.doc

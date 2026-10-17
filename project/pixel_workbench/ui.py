@@ -236,6 +236,7 @@ class DesktopUI:
         more_menu=tk.Menu(more,tearoff=False,bg=FIELD,fg=FG)
         for text,callback in [("检查成品",self.quality_dialog),("动画总览",self.overview_dialog),
                               ("存储管理",self.storage_dialog),
+                              ("AI 工作流与进度",self.workflow_dialog),
                               ("检查更新",self.show_updates),
                               ("使用说明与支持作者",self.show_welcome),
                               ("MCP 首次接入配置",self.connection_dialog),("协作记录",self.activity_dialog),
@@ -264,11 +265,30 @@ class DesktopUI:
         self.project_menu=tk.Menu(shelf_menu,tearoff=False,bg=FIELD,fg=FG)
         shelf_menu.config(menu=self.project_menu)
         shelf_menu.pack(side='right')
-        self.project_tabs_canvas=tk.Canvas(shelf,bg=BG,height=30,highlightthickness=0)
-        self.project_tabs_canvas.pack(side="left",fill="x",expand=True)
+        self.project_scroll_left=self.button(shelf,'‹',lambda:self.scroll_projects(-1),font=SMALL,padx=8,pady=5)
+        self.project_scroll_left.pack(side='left',padx=(0,4))
+        self.project_all_button=self.button(shelf,'全部项目',self.manage_projects_dialog,font=SMALL,pady=5)
+        self.project_all_button.pack(side='right',padx=(6,0))
+        self.project_scroll_right=self.button(shelf,'›',lambda:self.scroll_projects(1),font=SMALL,padx=8,pady=5)
+        self.project_scroll_right.pack(side='right',padx=(4,0))
+        self.project_tabs_view=tk.Frame(shelf,bg=BG)
+        self.project_tabs_view.pack(side='left',fill='x',expand=True)
+        self.project_tabs_canvas=tk.Canvas(self.project_tabs_view,bg=BG,height=30,highlightthickness=0,xscrollincrement=1)
+        self.project_tabs_canvas.pack(fill='x',expand=True)
+        self.project_scrollbar=tk.Scrollbar(self.project_tabs_view,orient='horizontal',
+            command=self.project_tabs_canvas.xview,width=8,bd=0,highlightthickness=0,
+            bg=FIELD,activebackground=ACCENT,troughcolor=BG)
+        self.project_tabs_canvas.config(xscrollcommand=self.project_scroll_changed)
         self.project_tabs=tk.Frame(self.project_tabs_canvas,bg=BG)
         self.project_tabs_canvas.create_window((0,0),window=self.project_tabs,anchor="nw")
-        self.project_tabs_canvas.bind('<MouseWheel>',lambda e:self.project_tabs_canvas.xview_scroll(-1 if e.delta>0 else 1,'units'))
+        self.project_tab_buttons={}
+        self.project_active_id=None
+        for widget in (self.project_tabs_canvas,self.project_tabs):
+            self.bind_project_scroll(widget)
+        self.project_tabs_canvas.bind('<Configure>',self.project_view_resized)
+        Tooltip(self.project_scroll_left,'向前查看项目')
+        Tooltip(self.project_scroll_right,'向后查看项目')
+        Tooltip(self.project_all_button,'打开完整项目列表，可滚动查看和切换全部项目。')
         self.project_tabs_signature=None
 
         # Pack the footer and timeline first: the canvas gets the remaining height.
@@ -487,6 +507,52 @@ class DesktopUI:
     def symmetry_mode(self):
         return {"左右对称": "x", "上下对称": "y", "四向对称": "xy"}.get(self.symmetry_var.get(), "off")
 
+    def bind_project_scroll(self,widget):
+        # Tk child buttons do not bubble wheel events to their containing Canvas.
+        for event in ('<MouseWheel>','<Shift-MouseWheel>','<Button-4>','<Button-5>'):
+            widget.bind(event,self.project_wheel,add='+')
+
+    def project_wheel(self,event):
+        direction=-1 if getattr(event,'num',None)==4 or getattr(event,'delta',0)>0 else 1
+        self.project_tabs_canvas.xview_scroll(direction*48,'units')
+        return 'break'
+
+    def scroll_projects(self,direction):
+        self.project_tabs_canvas.xview_scroll(direction,'pages')
+
+    def project_scroll_changed(self,first,last):
+        self.project_scrollbar.set(first,last)
+        self.project_scroll_left.config(state='disabled' if float(first)<=.001 else 'normal')
+        self.project_scroll_right.config(state='disabled' if float(last)>=.999 else 'normal')
+
+    def project_view_resized(self,event=None):
+        self.layout_project_tabs()
+        self.reveal_active_project()
+
+    def layout_project_tabs(self):
+        width=max(1,self.project_tabs.winfo_reqwidth())
+        height=max(30,self.project_tabs.winfo_reqheight())
+        self.project_tabs_canvas.config(scrollregion=(0,0,width,height),height=height)
+        overflow=width>self.project_tabs_canvas.winfo_width()+2
+        if overflow and not self.project_scrollbar.winfo_manager():
+            self.project_scrollbar.pack(fill='x')
+        elif not overflow and self.project_scrollbar.winfo_manager():
+            self.project_scrollbar.pack_forget()
+        if not overflow:self.project_tabs_canvas.xview_moveto(0)
+
+    def reveal_active_project(self):
+        button=self.project_tab_buttons.get(self.project_active_id)
+        if button is None:return
+        canvas=self.project_tabs_canvas
+        total=max(1,self.project_tabs.winfo_reqwidth())
+        left,right=button.winfo_x(),button.winfo_x()+button.winfo_width()
+        visible_left=canvas.canvasx(0)
+        viewport=canvas.winfo_width()
+        if left<visible_left:
+            canvas.xview_moveto(max(0,left-6)/total)
+        elif right>visible_left+viewport:
+            canvas.xview_moveto(max(0,right-viewport+6)/total)
+
     def refresh_projects(self):
         if not hasattr(self,'service'):return
         entries=self.service.projects.listing(self.path)
@@ -494,6 +560,9 @@ class DesktopUI:
         if self.project_tabs_signature==signature:return
         self.project_tabs_signature=signature
         for child in self.project_tabs.winfo_children():child.destroy()
+        self.project_tab_buttons={}
+        self.project_active_id=next((e['id'] for e in entries if e['active']),None)
+        self.project_all_button.config(text=f'全部项目 ({len(entries)})')
         self.project_menu.delete(0,'end')
         for title, callback in [("＋ 新项目", self.new_dialog), ("复制为新项目", self.fork_project_dialog),
                                 ("版本记录", self.project_history_dialog), ("并排对照", self.compare_projects_dialog)]:
@@ -510,6 +579,8 @@ class DesktopUI:
             button=self.button(self.project_tabs,title[:25],lambda key=entry['id']:self.project_action('switch',project_id=key),
                                entry['active'],pady=5,font=SMALL)
             button.pack(side='left',padx=(0,5))
+            self.project_tab_buttons[entry['id']]=button
+            self.bind_project_scroll(button)
             button.bind('<Button-3>',lambda event,key=entry['id']:self.project_context_menu(event,key))
             if not entry['available']:button.config(state='disabled')
             Tooltip(button,title+'\n'+entry['path']+'\n右键可删除项目；工程与历史可恢复。')
@@ -519,7 +590,8 @@ class DesktopUI:
         else:
             self.project_shelf.pack_forget()
         self.project_tabs.update_idletasks()
-        self.project_tabs_canvas.config(scrollregion=self.project_tabs_canvas.bbox('all'))
+        self.layout_project_tabs()
+        self.reveal_active_project()
 
     def manage_projects_dialog(self,deleted=False):
         from .project_ui import ProjectManagerDialog

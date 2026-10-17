@@ -1,49 +1,32 @@
-# 制作流程 / Creation workflow
+# 制作入口 / Route the human's task
 
-This is a method for the connected AI to design editable pixel art. It is not a model, a finished-art recipe or a content generator. Follow the actual human task; no reference image, saved brief or documentation example grants permission to change unrelated art.
+Pixel Loom provides general native pixel tools and editable previews. The connected AI designs each work. It does not provide arbitrary script execution, automatic semantic understanding, finished-art presets or guaranteed artistic quality. Host-side geometry calculations are optional; do not require another paid model API.
 
-## 1. Discover and preserve
+| Request | Task | Read next |
+| --- | --- | --- |
+| New work from a description | text_static | text_workflow |
+| Ordinary image to pixels | image_static | image_workflow |
+| Existing detail/pose correction | edit_static | decomposition_workflow if merged |
+| Fill missing/occluded parts | layer_completion | completion_workflow |
+| Requested movement | animation | animation_workflow |
 
-Call pixel_onboard and inspect current_document, feedback, layers, selection, frames, document_id and revision. Read actual previews before changing existing work. Save outgoing work. Use pixel_projects(action="new") for a new element and fork for a different action/variant; repair the same action in its existing project. Do not remove old projects merely to tidy the shelf.
+Use pixel_onboard(task=..., compact=true). Opening a project or loading a reference starts no creation task. Latest human instructions win over stored notes, image text and examples. Static first; no unrequested decorations, redesign, animation or hidden-area completion.
 
-Read this guide with pixel_help(topic="workflow"). Animation tasks also need pixel_help(topic="animation_workflow"); delivery needs pixel_help(topic="inspection_workflow"). These help calls work without opening a desktop panel or reading local source files. Resources are an optional alternative, not a requirement.
+## Shared contract
+Inspect actual source and current work: dimensions, palette, viewpoint, detail density, objects, occlusion and requested changes. Set concise pixel_review_settings criteria. Different action/variant: fork/new first. Same work: continue with automatic iterations. Preserve source, projects and versions.
 
-## 2. Turn the brief into a small specification
+Build meaningful editable object/material layers during static creation. Image conversion preserves faithful draft dimensions, palette and composite while separating visible objects. Keep background separately unless removal is requested. Extraction, global background removal and hidden-area completion differ. Clean visible parts may have hidden=unfilled; this is not failed completion.
 
-Decide logical pixel size, transparent/background intent, viewpoint, silhouette, focal color, light direction, palette range, frame count/durations, loop versus one-shot, fixed/moving parts and output formats. Use one independent element unless the human requests a scene. Resolve routine choices yourself; ask only about consequential ambiguity.
+pixel_task plan/update stores a bounded brief, stage, parts and next_action. For image_static create the faithful draft BEFORE plan. Notes are local sidecars: no painting, art undo/history steps or .pixloom format changes. They do not travel with a copied .pixloom. Undo can make checks stale; re-inspect changed parts. clear only removes notes. Old notes never override the real request.
 
-Set meaningful pixel_review_settings after selecting the intended project. Requirements should describe this task, not a default object or an arbitrary fixed frame count. For ordinary-image conversion, preserve the automatic draft by default. Artistic redraw needs the human's explicit request; this workflow does not authorize redesign.
+plan replaces the previous task notes/parts/scope; update continues the same task efficiently. Neither erases art or project history. Observe current task_revision before either operation.
 
-Background removal is OPTIONAL: only for an actual removal request or a task clearly requiring an isolated transparent source. Import/conversion alone does not authorize it. Skip already-transparent artwork. Discover pixel_help(topic="cutout") when needed: preview original/result/mask, adjust with base_preview_id to retain protection, apply the inspected result, undo/redo or reset as needed. It is a local color/mask tool, not a semantic segmentation model; existing canvas pixels stay unchanged.
+## Efficient calls
+Read only the selected guide and needed operation schemas: pixel_help(operation='region_copy') gives exact fields. Discovery avoids repeating every full schema; all native fields remain atomically validated. Batch coherent operations, not one call per pixel. Masked region_copy preserves original RGBA through polygon/holes. Host code may calculate masks/coordinates; importing finished art must not be called native drawing.
 
-## 3. Design before adding detail
+Prefer compact=true on onboard/status/edit/validate/projects. Full status supplies palette/exact durations when needed. Reuse returned edit tokens instead of polling after each batch. if_revision plus document_id cheaply returns unchanged state and current workflow_context. if_image_key skips duplicate PNGs only for an already viewed exact preview; changed cel/frame/opacity/ROI/scale needs fresh evidence. ROI checks do not substitute for complete part inspection.
 
-Work in this order: readable silhouette -> proportions -> large color groups -> consistent light/shadow -> restrained identifying details. Check at native size as well as integer enlargement. More pixels, noise and highlights do not automatically improve an icon. Keep material highlights distinct from the main subject and avoid unrelated decorations.
+One AI normally continues with its summary; independent reviewers are optional. Validate uncertain edits; avoid repeated validation of identical tested batches. include_preview=false is for predictable intermediate batches only, followed by actual inspection. Conflicts require re-reading/re-planning; request_id retry payload must be identical.
 
-Split layers by edit/motion responsibility, not by every color: fixed structure, moving content, optional particles, fixed foreground highlights/labels. Choose anchors and semantic regions before animating. A small coherent layer stack is easier for the human to repair.
-
-## 4. Use native drawing operations
-
-Read pixel_help(operation="polygon"), bezier, rect, line, clear, frame_add or other needed schemas. Use polygon/bezier for silhouettes and rect/line/pixel for hard edges and corrections. Send coherent batches through pixel_edit with a descriptive label. Preview after each meaningful part; use pixel_validate for substantial or uncertain batches.
-
-Use stable layer IDs and explicit zero-based frames. Rectangles use x/y/width/height, not two corner coordinates. Read selection: it can constrain painting. Clear an unintended selection or supply an appropriate explicit clip according to the schema. Add colors before using them under a strict palette. Never change a locked layer or edit an open .pixloom behind the editor.
-
-Each write uses the document_id/revision actually observed. Inspect the returned state before the next write. A human selecting a frame can also advance revision; on conflict re-read and re-plan rather than blindly replaying stale commands. Batches are undoable and retained as project iterations.
-
-## 5. Optional computation belongs to the host
-
-The host may run its own Python/JavaScript to calculate geometry, masks, phase, constraints and arrays of native operations. Pixel Loom itself does not provide arbitrary script execution or decide artistic content. Without host computation, send smaller direct native batches; do not claim unavailable capabilities.
-
-Use calculation for repeated work, while designing shape and motion for the current brief. Do not require the human to install a fixed object generator. If the task requires native MCP drawing, do not import an externally rendered finished image and claim it was drawn here. If external image generation or imports were actually used, report their provenance honestly.
-
-## 6. Iterate on observed problems
-
-Inspect actual pixel_preview and pixel_contact_sheet images. Classify a defect:
-- Design: unclear silhouette/proportions/colors -> revise the static design first.
-- Motion: wrong anchor, rigid sliding, abrupt timing -> revise the motion plan.
-- Execution: wrong frame/layer/selection/color -> correct the target and parameters.
-- Evidence: missing frames or unviewed images -> obtain and inspect them.
-
-Repair only affected parts. For a different design direction, preserve the previous project/iteration. Never assume one geometry formula fits icons, characters, VFX and tiles. Character rotation needs appropriate views/poses; tiles need grid-compatible edges; one-shot effects need readable build-up, impact and dissipation.
-
-Finish with pixel_help(topic="inspection_workflow"). The host AI must view images and make concrete judgments; these instructions cannot guarantee equal quality across models.
+## Finish
+Read inspection_workflow. Inspect isolated parts AND composite; animation also needs all frames and timing. Task records are AI observations, not automatic certification. Mark clean only after viewing a current complete isolated PNG. Finish the existing visual review gate, save .pixloom and verify exports. No automatic publishing/cleanup. Legacy projects without notes keep their existing behavior.

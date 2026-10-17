@@ -427,12 +427,18 @@ class Document:
         self._event("重做", "history", 0)
         return True
 
-    def composite(self, frame=None, override=None):
+    def rendering_layers(self, layers=None):
+        included = None
+        if layers is not None:
+            if not isinstance(layers, list) or not 1 <= len(layers) <= 64 or any(not isinstance(item, str) for item in layers):
+                raise PixelError("layers must be a nonempty list of at most 64 layer ids or names")
+            included = {self.layer(item).id for item in layers}
+        return [layer for layer in self.layers if (layer.visible if included is None else layer.id in included)]
+
+    def composite(self, frame=None, override=None, layers=None):
         frame = self.active_frame if frame is None else integer(frame, "frame", 0, len(self.durations) - 1)
         result = self.blank()
-        for layer in self.layers:
-            if not layer.visible:
-                continue
+        for layer in self.rendering_layers(layers):
             image = override[1] if override and override[0] == layer.id else layer.cels[frame]
             if layer.opacity < 255:
                 image = image.copy()
@@ -754,6 +760,12 @@ class Document:
                 source_layer = self.layer(op.get("source_layer", layer.id))
                 source_frame = integer(op.get("source_frame", frame), "source_frame", 0, len(self.durations) - 1)
                 patch = source_layer.cels[source_frame].crop((x, y, x + w, y + h))
+                if 'polygon' in op or 'holes' in op:
+                    mask=Image.new('L',(w,h),0 if 'polygon' in op else 255)
+                    painter=ImageDraw.Draw(mask)
+                    if 'polygon' in op:painter.polygon([(a-x,b-y) for a,b in op['polygon']],fill=255)
+                    for hole in op.get('holes',[]):painter.polygon([(a-x,b-y) for a,b in hole],fill=0)
+                    patch.paste((0,0,0,0),mask=ImageChops.invert(mask))
                 target_x, target_y = op["x"], op["y"]
             else:
                 patch = image.crop((x, y, x + w, y + h))
@@ -916,8 +928,8 @@ class Document:
                 "frame": frame, "layer": layer or "composite", "legend": legend,
                 "rows": ["".join(row) for row in rows] if len(colors) <= len(symbols) else rows}
 
-    def preview(self, frame=None, scale=8, rect=None, checker=True):
-        image = self.composite(frame)
+    def preview(self, frame=None, scale=8, rect=None, checker=True, layers=None):
+        image = self.composite(frame, layers=layers)
         if rect is not None:
             x, y, w, h = self.validate_rect(rect)
             image = image.crop((x, y, x + w, y + h))

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from functools import lru_cache
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal, Union, Any
 
 from jsonschema import Draft202012Validator
 from pydantic import ConfigDict, Field, StrictBool, StrictInt, StrictStr
@@ -104,9 +104,10 @@ op("region_transform", "transform", "Move, flip or rotate only a region/selectio
    {"rect": CLIP, "kind": {"enum": ["translate", "flip_horizontal", "flip_vertical", "rotate_cw", "rotate_ccw"]},
     "dx": COORD, "dy": COORD, "copy": BOOL, "update_region": BOOL, "layer": TARGET["layer"], "frame": FRAME},
    {"op": "region_transform", "rect": "eyes", "kind": "translate", "dx": 1, "dy": 0})
-op("region_copy", "transform", "Copy a rectangle to another position/cel/layer without changing the source.", ("rect", "x", "y"),
+op("region_copy", "transform", "Copy source pixels without changing the source. Optional polygon/holes use absolute SOURCE coordinates for clean object extraction; no hidden pixels are invented.", ("rect", "x", "y"),
    {"rect": CLIP, "x": COORD, "y": COORD, "source_layer": TARGET["layer"], "source_frame": FRAME,
-    "layer": TARGET["layer"], "frame": FRAME, "blend": {"enum": ["replace", "over"]}},
+    "layer": TARGET["layer"], "frame": FRAME, "blend": {"enum": ["replace", "over"]},
+    "polygon": array(POINT,3,1024), "holes": array(array(POINT,3,1024),0,32)},
    {"op": "region_copy", "rect": [4, 4, 8, 8], "x": 16, "y": 4})
 op("canvas_resize", "canvas", "Change canvas bounds by padding/cropping; pixels are not scaled. Undo restores cropped pixels.", ("width", "height"),
    {"width": number(1, 512), "height": number(1, 512), "anchor": {"enum": ["top_left", "center", "bottom_center"]}},
@@ -241,3 +242,10 @@ def operation_type():
 
 
 EditOperation = operation_type()
+
+# Thin discovery schema, full authoritative schemas remain in guide/full_schema.
+# Existing payloads are unchanged; Document.apply/validate still checks EVERY op
+# with SPECS before committing anything. Avoid repeating 43 full schemas in each tool.
+NativeOperation = Annotated[dict[str, Any], Field(json_schema_extra={
+    "properties":{"op":{"type":"string","enum":list(SPECS)}},"required":["op"],
+    "description":"Native op object. Read pixel_help(operation='<op>') for its exact fields; all fields are validated atomically by the editor."})]

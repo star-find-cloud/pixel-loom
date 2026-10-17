@@ -4,7 +4,7 @@
 
 An AI-facing pixel-art tool with documented general drawing/animation operations and a visual editor for humans to inspect results, create artwork, fix small defects and import/save/export. Standard MCP clients and the desktop share editable layers, cels, palette, named regions, project iterations and undo history. Content is planned by the user's own AI.
 
-Public preview **0.7.13 adds optional local background removal** with original/result/mask previews, adjustment, protection, undo/redo and PNG export through the desktop and MCP. Import/conversion never automatically removes backgrounds. Desktop behavior is tested on Windows. A headless backend and cross-platform CI configuration are included; other desktop platforms have not been fully validated.
+Public preview **0.7.14 adds task-specific MCP workflows, clean-layer inspection notes and compact/conditional reads**. Static creation comes first; hidden-surface completion and animation require the human's request. Optional local background removal, native drawing, undo, history and exports remain available. Importing/opening alone starts no artwork task. Desktop behavior is tested on Windows; a headless backend is also included.
 
 Source code lives in `project/`; this guide is also bundled in the portable `app/` folder. Run source commands in the directory containing `pyproject.toml`. Portable instructions start at the extracted `PixelLoom` root. Formal tests remain in `tests/`; generated test projects, logs and build caches are excluded.
 

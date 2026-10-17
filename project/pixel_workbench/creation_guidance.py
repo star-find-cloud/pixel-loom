@@ -2,25 +2,39 @@
 from pathlib import Path
 
 from . import __version__
+from .workflow import route, WORKFLOW_REVISION
 
 GUIDE_DIR = Path(__file__).with_name("resources")
 TOPICS = {
     "workflow": ("CREATION_WORKFLOW.md", "Design, native drawing and iteration"),
+    "text_workflow": ("TEXT_WORKFLOW.md", "Description to editable static art"),
+    "image_workflow": ("IMAGE_WORKFLOW.md", "Faithful pixel draft and visible-object layers"),
+    "completion_workflow": ("COMPLETION_WORKFLOW.md", "Requested hidden-area completion in the original style"),
+    "decomposition_workflow": ("DECOMPOSITION_WORKFLOW.md", "Analyze a flattened image before separating and animating it"),
     "animation_workflow": ("ANIMATION_WORKFLOW.md", "Layers, motion planning and clean frames"),
     "inspection_workflow": ("INSPECTION_WORKFLOW.md", "Visual evidence, repairs and delivery"),
 }
 
 
-def workflow_entry():
+def workflow_entry(task=None):
     """Keep discovery compact; detailed guidance is fetched explicitly via tools."""
     return {
-        "read_next": {"tool": "pixel_help", "arguments": {"topic": "workflow"}},
+        "read_next": route(task)['read_next'],
+        "routing":route(task),
         "details": [{"tool": "pixel_help", "arguments": {"topic": topic}} for topic in TOPICS if topic != "workflow"],
         "resource": "pixel-loom://workflow",
+        "single_image_animation": {
+            "when": "Animating a flattened image or an automatic pixel draft with merged body/material parts",
+            "read_next": {"tool": "pixel_help", "arguments": {"topic": "decomposition_workflow"}},
+            "before_animation": ["inspect source and explain structure/occlusion", "separate visible semantic parts; hidden completion requires a human request",
+                                 "inspect each isolated layer", "check restored composite AND trial joint poses"],
+            "rule": "Layer count and composite pixel equality do not prove correct decomposition. Repair mixed parts or gaps before building the animation.",
+        },
         "stages": [
             "Read current art and the human's task; preserve existing projects.",
-            "Define size, palette, viewpoint, timing, fixed/moving parts and acceptance requirements.",
-            "Design silhouette and large color groups; split static and moving layers.",
+            "Select static text/image, local edit, requested completion or requested animation from the human's task.",
+            "Static first; create clean editable object layers; do not infer hidden painting or animation permission.",
+            "Keep bounded pixel_task progress; read only the relevant guide and changed evidence.",
             "Draw native operations in coherent batches and inspect actual previews.",
             "Compute task-specific motion if useful; rebuild clean moving cels rather than accumulating old pixels.",
             "Inspect all frames, local details, actual timing and loop seams; repair and obtain new evidence.",
@@ -41,6 +55,7 @@ def workflow_help(topic="workflow"):
     return {
         "topic": topic,
         "application_version": __version__,
+        "workflow_revision":WORKFLOW_REVISION,
         "title": title,
         "guide": (GUIDE_DIR / filename).read_text(encoding="utf-8"),
         "related": [{"tool": "pixel_help", "arguments": {"topic": other}} for other in TOPICS if other != topic],

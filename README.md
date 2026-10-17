@@ -1,14 +1,16 @@
 # Pixel Loom · 像素织机
 
-## [⬇ 下载 Windows 便携版 · 0.7.13](https://github.com/yangsir2077/pixel-loom/releases/download/v0.7.13/pixel-loom-0.7.13-windows-x64.zip)
+**0.7.14 公开测试版**：整合按任务读取的 MCP 工作流、干净分层检查和传输优化。AI 接入后从 `pixel_onboard(task=..., compact=True)` 读取对应说明；应用“更多 → AI 工作流与进度”可查看当前记录。补齐遮挡处和动画按用户要求使用。
+
+## [⬇ 下载 Windows 便携版 · 0.7.14](https://github.com/yangsir2077/pixel-loom/releases/download/v0.7.14/pixel-loom-0.7.14-windows-x64.zip)
 
 下载后**完整解压**，双击 **打开像素织机.cmd** 即可使用，无需安装 Python。
 
-[查看发布页、版本说明与校验值](https://github.com/yangsir2077/pixel-loom/releases/tag/v0.7.13) · [使用说明](#1-先打开应用) · [反馈问题](https://github.com/yangsir2077/pixel-loom/issues)
+[查看发布页、版本说明与校验值](https://github.com/yangsir2077/pixel-loom/releases/tag/v0.7.14) · [使用说明](#1-先打开应用) · [反馈问题](https://github.com/yangsir2077/pixel-loom/issues)
 
 > **想直接使用，请点上面的 Windows 下载链接。** 本页的 `git clone`、**Code → Download ZIP**、`*-source.zip` 和 **Source code** 下载的是源码，不包含可直接运行的 `app` 文件夹或 exe。
 
-**0.7.13 公开测试版 · Windows 便携版 · 使用者和 AI 的统一入口**
+**0.7.14 公开测试版 · Windows 便携版 · 使用者和 AI 的统一入口**
 
 新增按需去背景：**导入参考 → 去背景**。原图/效果预览、点背景、强度调整、保护区域、应用/撤销/重做及透明 PNG 导出；默认导入和转换不自动抠图。AI 可从 MCP 内置说明发现并使用。
 
@@ -22,7 +24,7 @@
 
 ## 1. 先打开应用
 
-1. 下载 **pixel-loom-0.7.13-windows-x64.zip**，或在[发布页](https://github.com/yangsir2077/pixel-loom/releases/tag/v0.7.13)的 **Assets（资源）** 中选择这个文件。
+1. 下载 **pixel-loom-0.7.14-windows-x64.zip**，或在[发布页](https://github.com/yangsir2077/pixel-loom/releases/tag/v0.7.14)的 **Assets（资源）** 中选择这个文件。
 2. 完整解压，打开解压得到的 **PixelLoom** 文件夹；不要直接在压缩包里运行。
 3. 双击根目录的 **打开像素织机.cmd**，或进入 **app** 文件夹双击 **PixelLoom.exe**。Windows 便携版不需要另装 Python。
 

@@ -65,6 +65,7 @@ async def run(server_executable=None, artifacts=None):
                     initialized = await client.initialize()
                     assert initialized.serverInfo.version == __version__
                     assert "pixel_help(topic='workflow')" in initialized.instructions
+                    assert "decomposition_workflow" in initialized.instructions
                     return client
 
                 first = await connect()
@@ -75,14 +76,16 @@ async def run(server_executable=None, artifacts=None):
                 entry = guide["creation_workflow"]
                 request = entry["read_next"]
                 learned = data(await first.call_tool(request["tool"], request["arguments"]))
-                assert learned["topic"] == "workflow" and "silhouette" in learned["guide"]
+                assert learned["topic"] == "workflow" and "image_static" in learned["guide"]
                 for request in entry["details"]:
                     detail = data(await first.call_tool(request["tool"], request["arguments"]))
                     assert detail["guide"]
                 resources = await first.list_resources()
                 assert entry["resource"] in {str(item.uri) for item in resources.resources}
                 full = json.loads((await first.read_resource(entry["resource"])).contents[0].text)
-                assert set(full) == {"workflow", "animation_workflow", "inspection_workflow"}
+                from pixel_workbench.creation_guidance import TOPICS
+                assert set(full) == set(TOPICS)
+                assert entry['single_image_animation']['read_next']['arguments']['topic'] == 'decomposition_workflow'
                 for name, arguments in [("draw_sprite", {"brief": "abstract fixture"}),
                                         ("animate_sprite", {"action": "abstract fixture"}),
                                         ("finish_and_review", {})]:
@@ -128,6 +131,14 @@ async def run(server_executable=None, artifacts=None):
                     if f:
                         assert image.getpixel((8, 9))[3] == 0  # no inherited frame-0 motion
                     assert (image.getpixel((15, 15))[3] == 255) == (f == 2)
+                before_isolation = data(await first.call_tool('pixel_status', {}))
+                isolated_result = await first.call_tool('pixel_preview', {'frame':0,'scale':1,'checker':False,'layers':['motion']})
+                isolated = picture(isolated_result)
+                assert isolated.getpixel((2,2))[3] == 0 and isolated.getpixel((8,9))[3] == 255
+                assert data(isolated_result)['layers'] == ['motion']
+                after_isolation = data(await first.call_tool('pixel_status', {}))
+                for key in ['document_id','revision','layers','active_layer','active_frame','can_undo','can_redo','unsaved_changes']:
+                    assert before_isolation[key] == after_isolation[key], key
                 premature = await first.call_tool("pixel_export", {"path": "exports/premature.png"})
                 assert premature.isError and premature.structuredContent["code"] == "REVIEW_REQUIRED"
                 diagnostic = data(await first.call_tool("pixel_motion_check", {}))

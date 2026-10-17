@@ -1,0 +1,13 @@
+# 文字描述 → 静态作品 / text_static
+
+Use for a new human-described work. This is a method, not a library of completed objects. Do not add animation, accessories, hidden surfaces or a generated reference unless requested. Merely inspecting existing art is not permission to replace it.
+
+1. Read compact onboarding. Identify size, viewpoint, objects, palette intent, materials and detail density. Choose routine details reasonably; clarify consequential blocking ambiguity. Detailed references set expected fidelity: do not silently reduce dimensions or flatten textured surfaces.
+2. New work: create a separate project and observe fresh tokens. pixel_task plan text_static with brief, expected_task_revision and observed document/revision. Resumed notes may have nonzero task_revision: read status first. Set actual acceptance criteria, normally one frame.
+3. Design silhouette and large color groups before detail. Build a small semantic stack from the start: actual objects/background and independent overlapping parts as needed. Name layers by contents. Arbitrary rectangular crops or one merged layer for distinct objects are poor editability; layer count alone proves nothing.
+4. Use native polygon/stroke/bezier/pixels/stamps. Fetch fields on demand. Coherent batches and compact replies avoid repeated context. Preserve consistent material ramps and light direction. A limited palette is deliberate color grouping, not a universal 32-color count.
+5. View every nonempty visible object/background with pixel_preview(layers=[stable_id]), full part and integer zoom. Reject foreign fragments, stray outlines, accidental holes and wrong overlap ownership. Hidden continuation not requested: record hidden=unfilled or not_requested honestly. Do not paint it just to turn a status green.
+6. pixel_task update parts replaces the bounded list; retain earlier records when updating. extraction=clean requires viewing current complete isolated PNGs. Edits make checks stale; inspect changed layers again. Check composite silhouette, legibility, color, proportions and attachment order too.
+7. Follow inspection_workflow and the existing review gate, then mark task deliver, save editable .pixloom and export reviewed scope. Notes add no art iterations; artwork batches still retain normal undo/history.
+
+Later movement is a separate animation route and distinct-action fork. A local correction uses edit_static with only that scope. Do not rerun the full creation workflow for every small fix. Existing project import/open never causes automatic extraction or painting.

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.7.14 — 2026-10-17: task workflows and efficient MCP reads
+
+- Add project-strip arrows, an overflow scrollbar and a complete-list button. Wheel scrolling works over child tabs; switching projects or resizing reveals the active tab rather than clipping later projects.
+
+- Consolidate task routing: text/image static creation with clean visible-object layers; local edits, requested completion and requested animation remain distinct. Remove contradictory stop-after-draft and implicit hidden-repair guidance; preserve all native features.
+- Add bounded local task notes/part-check evidence with separate revision guards, draft fidelity checks and stale-check detection. Reuse existing review/history/undo; legacy projects require no migration.
+- Add opt-in compact replies, conditional state/PNG reads, bounded preview caching and native polygon/holes region_copy. Keep full legacy calls and full native operation validation; fetch exact schemas on demand.
+- Add an optional read-only workflow/progress viewer under More, with no persistent sidebar or creation form.
+- Add real stdio task/compact/history metadata regression coverage and desktop progress/project-navigation CI checks. Fresh-context AI tests used isolated fixtures and MCP-provided methods; they do not establish equal artistic ability across models.
+- Link the method from initialization, onboarding, animation prompts and bundled guides. Instructions remain general and contain no finished-character templates or automatic segmentation model.
+- Add read-only `pixel_preview(layers=[...])` for isolated layers or linked groups, including hidden layers, while preserving stack order, opacity, visibility, active cel, history and artwork. Detect older backends that cannot honor layer selection instead of displaying a composite as an isolated part.
+- Extend pixel-level service and real stdio MCP regression tests for discovery, read-only isolation and compatibility.
+
 ## 0.7.13 — 2026-10-17: optional background removal
 
 - Add one background-removal entry in the reference importer with original/result comparison, background seed clicks, strength adjustment, optional soft edges, protected rectangles, mask view and explicit application.

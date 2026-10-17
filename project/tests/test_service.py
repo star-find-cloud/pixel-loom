@@ -1,4 +1,6 @@
 from copy import deepcopy
+import base64
+from io import BytesIO
 import json
 from pathlib import Path
 import tempfile
@@ -89,6 +91,46 @@ class ServiceTests(unittest.TestCase):
             self.assertEqual(image.getpixel((2, 2))[3], 255)
         self.assertEqual(self.service.doc.fingerprint(), before)
         self.assertTrue(all(layer.visible for layer in self.service.doc.layers))
+
+    def test_isolated_preview_reads_hidden_layer_and_preserves_live_document(self):
+        base = self.service.doc.layers[0].id
+        self.call('/command', ops=[
+            {'op':'rect', 'layer':base, 'x':0, 'y':0, 'width':48, 'height':48, 'color':1},
+            {'op':'layer_add', 'id':'part', 'name':'part, foreground'},
+            {'op':'pixel', 'layer':'part', 'frame':0, 'x':2, 'y':2, 'color':22},
+            {'op':'layer_set', 'layer':'part', 'visible':False, 'locked':True, 'opacity':128},
+            {'op':'frame_add', 'copy_from':0}, {'op':'select', 'layer':base, 'frame':1},
+        ])
+        before = self.service.doc.to_dict()
+        history = (len(self.service.doc.undo_stack), len(self.service.doc.redo_stack), self.service.dirty)
+        query = {'frame':['0'], 'scale':['2'], 'rect':['1,1,3,3'], 'checker':['0'],
+                 'layers':[json.dumps(['part, foreground'])]}
+        result = self.service.dispatch('GET', '/snapshot', query=query)[0]
+        self.assertEqual(result['layers'], ['part'])
+        self.assertEqual(result['image_roles'], ['isolated_layer'])
+        with Image.open(BytesIO(base64.b64decode(result['preview_png']))) as image:
+            self.assertEqual(image.size, (6,6))
+            self.assertEqual(image.getpixel((0,0))[3], 0)
+            self.assertEqual(image.getpixel((2,2))[3], 128)
+        raw = self.service.dispatch('GET', '/preview.png', query=query)[0]
+        self.assertEqual(raw, base64.b64decode(result['preview_png']))
+        # Argument order does not reorder the stack; source opacity still applies.
+        group = self.service.dispatch('GET', '/snapshot', query={
+            'frame':['0'], 'scale':['1'], 'checker':['0'], 'layers':[json.dumps(['part',base])],
+        })[0]
+        with Image.open(BytesIO(base64.b64decode(group['preview_png']))) as image:
+            expected = Image.alpha_composite(Image.new('RGBA',(1,1),self.service.doc.layers[0].cels[0].getpixel((2,2))),
+                                            Image.new('RGBA',(1,1),(*self.service.doc.layer('part').cels[0].getpixel((2,2))[:3],128)))
+            self.assertEqual(image.getpixel((2,2)), expected.getpixel((0,0)))
+        self.assertEqual(self.service.doc.to_dict(), before)
+        self.assertEqual((len(self.service.doc.undo_stack), len(self.service.doc.redo_stack), self.service.dirty), history)
+
+    def test_invalid_preview_layers_do_not_change_art_or_visibility(self):
+        before = self.service.doc.to_dict()
+        for value in ['[]', '{}', '"one"', '[1]', '["missing"]', '[', json.dumps(['missing']*65)]:
+            with self.subTest(value=value), self.assertRaises(PixelError):
+                self.service.dispatch('GET','/snapshot',query={'layers':[value]})
+        self.assertEqual(self.service.doc.to_dict(), before)
 
     def test_export_collision_preserves_existing_file(self):
         result = self.call("/export", path="exports/a.png")

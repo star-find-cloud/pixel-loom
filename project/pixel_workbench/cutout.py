@@ -226,7 +226,7 @@ HELP = {"topic": "cutout", "method": "Local color/connected background removal; 
         "when_to_use": "OPTIONAL. Only for a real background-removal request or a task clearly requiring an isolated transparent source. Importing/converting an image alone is not permission to remove its background. Skip already-transparent sources and unrelated artwork; do not make this a mandatory creation step.",
         "workflow": ["pixel_reference_setup(action='load', role='subject')", "pixel_cutout_preview(settings=...) → inspect ALL original/result/mask images",
                      "Adjust tolerance/points/protect_regions or polygons and preview again", "pixel_cutout(action='apply', preview_id=...) with the latest three observed tokens",
-                     "Optional undo/redo/reset or export transparent reference PNG; pixel_redraw_begin uses the applied cutout"],
+                     "After apply, optional undo/redo/reset or export transparent reference PNG; export requires applied settings. pixel_redraw_begin uses the applied cutout"],
         "coordinates": "Stored, EXIF-normalized reference pixels, at most 1024 per side. NOT pixel canvas coordinates. Rectangles [x,y,width,height].",
         "settings": DEFAULTS, "ranges": {"tolerance": [0,120], "softness": [0,40], "points": "0–16 [x,y] seeds; each also samples background RGB",
             "protect_regions": "0–32 rectangles", "keep_polygons": "0–16 polygons with 3–128 vertices", "remove_polygons": "0–16 polygons; explicit keep wins"},

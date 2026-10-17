@@ -2,7 +2,7 @@
 
 In the complete handoff, read `../README.md` first. In a standalone source archive, read this directory's `README.md`.
 Start actual editor work with `pixel_onboard`; reading files does not register MCP.
-Preserve existing projects. Default image conversion is automatic draft only; artistic redraw needs the human's explicit request.
+Preserve existing projects. Default image creation/conversion preserves the faithful automatic draft and separates visible objects into clean editable layers. Hidden completion, artistic redraw and animation require the human's request; opening/importing alone starts no editing task.
 Do not add personal artwork, tokens, client settings, caches or build outputs to the repository.
 
 ## Development

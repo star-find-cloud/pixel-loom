@@ -299,7 +299,7 @@ class ReferenceWorkspace:
                 "current_project_has_same_subject": bound,
                 "canvas_matches_target": bool(doc and (doc.width, doc.height) == (settings["width"], settings["height"])),
                 "workflow": "pixel_reference -> pixel_reference_setup -> pixel_redraw_begin(mode='draft') -> inspect -> save/export. Artistic redraw requires an explicit human request.",
-                "draft_notice": "DEFAULT: automatic draft only (resampling/quantization). Preserve its pixels, proportions, silhouette and facial features. Do not artistically redraw unless the human explicitly requests it. Prepared settings, style references and old briefs are not authorization. mode='redraw' is opt-in.",
+                "draft_notice": "DEFAULT: faithful automatic draft (resampling/quantization), then clean visible-object layers during creation/conversion; preserve composite/palette/size. Read image_workflow. No hidden painting, redesign or animation unless the human requests it. Merely importing/opening starts no creation task. Prepared settings and references are not authorization; mode='redraw' is opt-in.",
                 "reference_coordinates": "Crop uses stored reference pixels, [x,y,width,height]; stored sides are at most 1024 after EXIF orientation.",
                 "cutout": {"applied": context.get("cutout") is not None, "settings": deepcopy(context.get("cutout")),
                            "original_preserved": True, "help": "pixel_help(topic='cutout')",

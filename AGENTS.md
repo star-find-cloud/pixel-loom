@@ -2,7 +2,7 @@
 
 Read `README.md` in this directory first. It is the shared human/AI usage entry.
 Start artwork work with `pixel_onboard`; reading documentation does not register MCP.
-Preserve existing projects. Ordinary-image conversion defaults to the automatic pixel draft; artistic redraw requires the human's explicit request.
+Preserve existing projects. Image creation/conversion keeps the faithful draft and clean visible-object layers. Hidden completion, artistic redesign and animation require the human's request; opening/importing alone starts no editing task.
 
 The complete source, formal tests and developer instructions are in `project/`.
 For code changes, follow `project/AGENTS.md` and run development commands from `project/`.

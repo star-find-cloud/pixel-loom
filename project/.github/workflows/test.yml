@@ -19,6 +19,7 @@ jobs:
       - run: python -m unittest discover -s tests -v
       - run: python -m tests.mcp_public_smoke
       - run: python -m tests.mcp_creation_smoke
+      - run: python -m tests.mcp_task_smoke
       - run: python -m tests.mcp_reference_smoke
       - run: python -m tests.mcp_cutout_smoke
       - run: python -m tests.mcp_quality_smoke
@@ -45,5 +46,9 @@ jobs:
       - run: python -m tests.gui_storage_smoke
         if: runner.os == 'Windows'
       - run: python -m tests.gui_projects_smoke
+        if: runner.os == 'Windows'
+      - run: python -m tests.gui_project_navigation_smoke
+        if: runner.os == 'Windows'
+      - run: python -m tests.gui_workflow_smoke
         if: runner.os == 'Windows'
       - run: python tools/build_release.py --check

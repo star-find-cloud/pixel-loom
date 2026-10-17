@@ -1518,6 +1518,41 @@
             "replace",
             "over"
           ]
+        },
+        "polygon": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": -4096,
+              "maximum": 4096
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "minItems": 3,
+          "maxItems": 1024
+        },
+        "holes": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": -4096,
+                "maximum": 4096
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "minItems": 3,
+            "maxItems": 1024
+          },
+          "minItems": 0,
+          "maxItems": 32
         }
       },
       "required": [
