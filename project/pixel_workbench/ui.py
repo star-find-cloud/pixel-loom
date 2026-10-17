@@ -527,7 +527,15 @@ class DesktopUI:
 
     def project_view_resized(self,event=None):
         self.layout_project_tabs()
-        self.reveal_active_project()
+        # Windows can clamp/recalculate Canvas.xview after the Configure event.
+        # Reveal only after Tk has settled its new viewport and scroll region.
+        pending=getattr(self,'project_reveal_job',None)
+        if pending:self.root.after_cancel(pending)
+        def settled():
+            self.project_reveal_job=None
+            self.layout_project_tabs()
+            self.reveal_active_project()
+        self.project_reveal_job=self.root.after_idle(settled)
 
     def layout_project_tabs(self):
         width=max(1,self.project_tabs.winfo_reqwidth())

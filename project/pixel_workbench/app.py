@@ -1233,7 +1233,7 @@ class Editor(DesktopUI):
         if self.updates is not None:
             self.updates.close()
         self.stop_play()
-        for name in ('fit_job','pump_job','autosave_job','welcome_job'):
+        for name in ('fit_job','pump_job','autosave_job','welcome_job','project_reveal_job'):
             job=getattr(self,name,None)
             if job:
                 try:self.root.after_cancel(job)

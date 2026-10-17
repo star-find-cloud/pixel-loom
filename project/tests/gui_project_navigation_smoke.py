@@ -53,9 +53,16 @@ def main():
             editor.project_scroll_left.invoke()
             root.update()
             assert canvas.xview()[0]<before
-            root.geometry('1320x800+30+30')
-            root.update()
-            assert active_visible(),'Active project clipped after resize'
+            for width in (1320,1160,1240,1320):
+                root.geometry(f'{width}x800+30+30')
+                # Native window-manager resize messages need a real event turn;
+                # one update() can return before those messages arrive on Windows.
+                root.after(120,root.quit)
+                root.mainloop()
+                root.update()
+                button=editor.project_tab_buttons[editor.project_active_id]
+                assert active_visible(),('Active project clipped after resize',width,canvas.winfo_width(),
+                    canvas.xview(),button.winfo_x(),button.winfo_width())
             editor.project_all_button.invoke()
             root.update()
             manager=editor.project_manager
