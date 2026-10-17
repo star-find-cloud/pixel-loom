@@ -6,11 +6,13 @@ An AI-facing pixel-art tool with documented general drawing/animation operations
 
 Public preview **0.7.13 adds optional local background removal** with original/result/mask previews, adjustment, protection, undo/redo and PNG export through the desktop and MCP. Import/conversion never automatically removes backgrounds. Desktop behavior is tested on Windows. A headless backend and cross-platform CI configuration are included; other desktop platforms have not been fully validated.
 
-This is the `project/` source subproject. The complete handoff starts with the parent `README.md`; development commands here run in this directory, next to `pyproject.toml`. Formal tests remain in `tests/`; generated test projects, logs and build caches are excluded.
+Source code lives in `project/`; this guide is also bundled in the portable `app/` folder. Run source commands in the directory containing `pyproject.toml`. Portable instructions start at the extracted `PixelLoom` root. Formal tests remain in `tests/`; generated test projects, logs and build caches are excluded.
 
 ## Download (Windows)
 
 Download the matching `pixel-loom-<version>-windows-x64.zip` from [GitHub Releases](https://github.com/yangsir2077/pixel-loom/releases), extract the whole `PixelLoom` folder and run the root launcher or `app/PixelLoom.exe`. Keep the complete `app` folder, including `PixelLoomMCP.exe` and `_internal`. The portable build bundles its Python runtime.
+
+**git clone, Code → Download ZIP, `*-source.zip` and Source code provide source only, without portable executables.** For direct use, choose the asset ending in `windows-x64.zip`. If already inside `app/`, run `PixelLoom.exe` there. The desktop entry is named `PixelLoom.exe`; `pixel_workbench` is the Python module name. AI hosts launch `app/PixelLoomMCP.exe --mcp`, rather than the desktop exe.
 
 ## Check for updates
 
@@ -18,16 +20,16 @@ More → Check for updates reads public GitHub release metadata asynchronously a
 
 ## Install from source
 
-Python 3.11+ is required. Desktop mode also needs Tk.
+Python 3.11+ is required. Desktop mode also needs Tk. On Windows, start in the cloned/extracted repository root and enter `project/` first. Skip that first line if the current directory already contains `pyproject.toml`:
 
-```sh
+```powershell
+Set-Location .\project
 python -m venv .venv
-# Activate this environment using your platform's normal command.
-python -m pip install -e .
-pixel-loom
+.\.venv\Scripts\python.exe -m pip install -e .
+.\.venv\Scripts\python.exe -m pixel_workbench
 ```
 
-On Windows, `setup.ps1` and the supplied launcher are alternatives. A portable Windows folder contains `PixelLoom.exe`, `PixelLoomMCP.exe` and `_internal`; keep them together.
+Alternatively, run `setup.ps1` in `project/`, then its launcher or `launch.ps1`. Source installation does not create `app/PixelLoom.exe`. On Linux/macOS, enter the directory containing `pyproject.toml`, create/activate a virtual environment, install with `python -m pip install -e .`, then run `python -m pixel_workbench`.
 
 ## Connect MCP
 
@@ -40,7 +42,7 @@ Portable MCP command: absolute `PixelLoomMCP.exe`, with argument `--mcp`.
 
 Reload MCP in the client, then call **`pixel_onboard`**. It returns the live project, workspace, rules and a runnable native-drawing recipe. No model API key is required by this application; the connected host supplies model reasoning.
 
-The server exposes 23 tools, 44 validated native operations, three resources and four prompts. Tool argument schemas, validation and focused help derive from one registry. A distributable agent skill is in `skills/pixel-loom/SKILL.md`.
+Discover the actual tools, resources and prompts from the connected MCP server; use `pixel_onboard` and `pixel_help` for current capabilities and operation schemas. Validation and focused operation help derive from one registry. A distributable agent skill is in `skills/pixel-loom/SKILL.md`.
 
 ## Capabilities
 
@@ -98,7 +100,7 @@ Open **导入参考** in the desktop. Import an ordinary PNG/JPEG/WebP/BMP/GIF a
 
 Style images are optional user/client imports or embedded project references; none are bundled. The style row shows the source and offers import/replace, view and clear. A different source clears the previous style while preserving old project references. Style images do not affect automatic draft sampling.
 
-`pixel_reference` returns actual source/style/draft/artwork images and can dry-run native edits in comparison. `pixel_reference_setup` imports/configures references with observed reference/document tokens. `pixel_redraw_begin(mode="draft")` creates the editable automatic draft by default, protecting unsaved artwork. Explicit `mode="redraw"` supplies layered artistic redraw with an optional locked seed. The `redraw_reference` prompt explains the artistic workflow. Reconnect existing MCP clients to discover these tools. There are 23 tools, 44 native operations and four prompts.
+`pixel_reference` returns actual source/style/draft/artwork images and can dry-run native edits in comparison. `pixel_reference_setup` imports/configures references with observed reference/document tokens. `pixel_redraw_begin(mode="draft")` creates the editable automatic draft by default, protecting unsaved artwork. Explicit `mode="redraw"` supplies layered artistic redraw with an optional locked seed. The `redraw_reference` prompt explains the artistic workflow. Reconnect existing MCP clients to discover current tools and use `pixel_help` for their exact operation schemas.
 
 The draft is only quantization/resampling; the connected AI authors proportions, silhouettes and color clusters with native drawing operations. The editor does not autonomously invoke external AI. GUI overlays do not alter exported pixels. References embed in saved .pixloom projects; no original-image path is required after moving a project. Stored references normalize EXIF and sides to at most 1024 pixels; crop uses those coordinates. Local files up to 50 MB / 40 million pixels are accepted.
 

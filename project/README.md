@@ -6,27 +6,30 @@
 
 **当前版本 0.7.13，公开测试版，新增按需去背景。** 抠图只在用户打开入口或 AI 明确需要时使用，默认导入/转换保留背景。MCP 内置说明包含预览、增量调整、保护与撤销方法。Windows 桌面端经过本机测试；其他平台可从源码运行，桌面适配尚未完整验证。
 
-这是 `project/` 源码子项目。整份交付的使用入口在上一级 `README.md`；本文的“仓库根目录”和开发命令均指包含 `pyproject.toml` 的本目录。`tests/` 是保留给开源维护的正式测试，不是本地测试产物；临时工程、日志和构建缓存不随交付分发。
+源码位于仓库的 `project/` 目录；本文也随便携版放在 `app/` 中。**源码命令必须在含 `pyproject.toml` 的目录执行**，便携版启动则从解压后的 `PixelLoom` 根目录开始。`tests/` 是保留给开源维护的正式测试；临时工程、日志和构建缓存不随交付分发。
 
 ## 开始使用
 
 ### 方式一：下载 Windows 便携版（推荐）
 
-1. 打开 [GitHub Releases](https://github.com/yangsir2077/pixel-loom/releases)，下载对应版本的 `pixel-loom-<版本>-windows-x64.zip`。
+1. 打开 [GitHub Releases](https://github.com/yangsir2077/pixel-loom/releases)，在 **Assets（资源）** 下载 `pixel-loom-<版本>-windows-x64.zip`。当前[直接下载 0.7.13 Windows 便携版](https://github.com/yangsir2077/pixel-loom/releases/download/v0.7.13/pixel-loom-0.7.13-windows-x64.zip)。
 2. 解压**整个** `PixelLoom` 文件夹，双击根目录的 `打开像素织机.cmd`，或打开 `app/PixelLoom.exe`。保留完整 `app` 文件夹，包含 `PixelLoomMCP.exe` 和 `_internal`；只拷贝一个 exe 不能运行。
 3. 便携版内置 Python 运行库，不需要另装 Python。
 
+`git clone`、**Code → Download ZIP**、`*-source.zip` 和 **Source code** 都是源码，不带便携版 exe。当前桌面程序叫 **PixelLoom.exe**；如果已经进入 `app` 文件夹，直接运行它，不再找下一层 `app`。AI 的入口是同目录 **PixelLoomMCP.exe**。
+
 ### 方式二：从源码运行
 
-需要 Python 3.11+；桌面模式还需要 Tk（Windows 标准 Python 通常自带）。克隆本仓库后，在仓库根目录执行：
+需要 Python 3.11+；桌面模式还需要 Tk（Windows 标准 Python 通常自带）。以下从克隆／源码 ZIP 解压后的仓库根目录执行。**先进入 `project`**；如果当前目录已经有 `pyproject.toml`，跳过第一行：
 
 ```powershell
+Set-Location .\project
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e .
-.\.venv\Scripts\pixel-loom.exe
+.\.venv\Scripts\python.exe -m pixel_workbench
 ```
 
-也可以运行 `setup.ps1`，再双击 `打开像素织机.cmd`。Linux/macOS 在虚拟环境中执行 `python -m pip install -e .` 后运行 `pixel-loom`。
+Windows 也可以在 `project` 目录运行 `setup.ps1`，再双击同目录的 `打开像素织机.cmd`。这会从 Python 源码运行，不会生成 `app/PixelLoom.exe`。Linux/macOS 同样先进入含 `pyproject.toml` 的源码目录，在虚拟环境中安装后运行 `python -m pixel_workbench`。
 
 ### 接入 AI 客户端
 
@@ -114,11 +117,11 @@ Windows 便携版（`PixelLoom.exe`、`PixelLoomMCP.exe` 和 `_internal`）不�
 
 ## 3. 首次连接 Codex / Claude Desktop
 
-服务类型选 **本地 stdio**，命令指向便携版文件夹中 `PixelLoomMCP.exe` 的真实绝对路径，参数为 `--mcp`。不要填图形界面的 `PixelLoom.exe`，也不要把本地 127.0.0.1 地址填进远程连接器。
+服务类型选 **本地 stdio**。便携版命令指向解压根目录中 `app/PixelLoomMCP.exe` 的真实绝对路径，参数为 `--mcp`；如果已经进入 `app`，就是当前目录的 `PixelLoomMCP.exe`。不要填图形界面的 `PixelLoom.exe`，也不要把本地 127.0.0.1 地址填进远程连接器。
 
 最省事的方式：先保存并关闭其他位置打开的 Pixel Loom，再打开这一份 `PixelLoom.exe`，进入 **更多 → MCP 首次接入配置**，复制当前路径的配置到客户端。软件默认开启本地服务，无须在画布旁边开启 AI 开关。
 
-从源码运行时，命令改为虚拟环境的 `python.exe`，参数为 `-m pixel_workbench --mcp`；也可以执行 `.\.venv\Scripts\pixel-loom-config.exe --format both` 生成本机配置。它默认只输出配置，不修改其他应用；明确需要自动注册时用 `--install codex`、`--install claude-desktop` 或 `--install both`，写入前会备份原配置。
+从源码运行时，先完成上一节安装，命令使用 `project/.venv/Scripts/python.exe` 的真实绝对路径，参数为 `-m pixel_workbench --mcp`。在含 `pyproject.toml` 的源码目录，也可以执行 `.\.venv\Scripts\pixel-loom-config.exe --format both` 生成本机配置。它默认只输出配置，不修改其他应用；明确需要自动注册时用 `--install codex`、`--install claude-desktop` 或 `--install both`，写入前会备份原配置。
 
 ### Codex
 
@@ -215,6 +218,8 @@ Pixel Loom 不会自动修改你的客户端配置。向 Claude Desktop 拖入�
 |---|---|
 | 新对话里没有 `pixel_onboard` | 先配置／启用本地 MCP 并重新加载；读 README 不会自动出现工具。 |
 | 启动后无工具或报 JSON 错误 | 命令必须是 `PixelLoomMCP.exe`，参数 `--mcp`；stdio 不应混入其他脚本的普通输出。 |
+| 克隆／Download ZIP 后没有 exe 或 app 文件夹 | 取得的是源码。直接使用请下载 Releases 中的 `*-windows-x64.zip`；源码运行先进入 `project` 安装依赖。 |
+| 找不到 Pixel_workbench.exe | 当前桌面程序名是 `PixelLoom.exe`，位于便携版的 `app` 目录；源码模式运行 `python -m pixel_workbench`。 |
 | 移动目录后连接失败 | 更新客户端里 exe 的绝对路径；不要继续指向旧位置。 |
 | 提示版本不同 | 保存并关闭旧版窗口，重启当前版本的 MCP；不要丢弃未保存作品。 |
 | 看到旧项目／旧参考 | 本机共用用户数据；先保留它，再新建试用项目。它们不在发布目录里。 |

@@ -6,6 +6,8 @@
 
 [下载 Windows 0.7.13 便携版](https://github.com/yangsir2077/pixel-loom/releases/download/v0.7.13/pixel-loom-0.7.13-windows-x64.zip) · [版本说明与校验值](https://github.com/yangsir2077/pixel-loom/releases/tag/v0.7.13) · [反馈问题](https://github.com/yangsir2077/pixel-loom/issues)
 
+**直接使用软件：点上面的 Windows 便携版下载。** `git clone`、GitHub 的 **Code → Download ZIP**、`*-source.zip` 和 **Source code** 下载的是源码，不包含可直接运行的 `app` 文件夹或 exe。
+
 这是一个面向 AI 的像素创作工具，也是供用户查看、创作和修改作品的可视化编辑器。AI 通过 MCP 和配套说明使用通用绘图与动画工具；用户直观看结果、手动修细节，并使用导入、保存和导出等基础功能。普通使用不需要打开源码或测试文件，也不需要单独安装 Python。
 
 0.7.12 已加入 MCP 自带制作与检查流程：新接入的 AI 从 `pixel_onboard` 取得方法入口，按需读取制作、动画和检查指南，无需使用者另发工作流文档。
@@ -16,7 +18,31 @@
 
 ## 1. 先打开应用
 
-从 GitHub 首次使用时，先下载上面的 Windows 便携版，完整解压 `PixelLoom` 文件夹。双击 [打开像素织机.cmd](打开像素织机.cmd)，或进入 `app` 双击 `PixelLoom.exe`。
+1. 下载 **pixel-loom-0.7.13-windows-x64.zip**，或在[发布页](https://github.com/yangsir2077/pixel-loom/releases/tag/v0.7.13)的 **Assets（资源）** 中选择这个文件。
+2. 完整解压，打开解压得到的 **PixelLoom** 文件夹；不要直接在压缩包里运行。
+3. 双击根目录的 **打开像素织机.cmd**，或进入 **app** 文件夹双击 **PixelLoom.exe**。Windows 便携版不需要另装 Python。
+
+```text
+PixelLoom/                 解压后的根目录
+├─ 打开像素织机.cmd         普通用户双击这里
+├─ app/
+│  ├─ PixelLoom.exe        桌面编辑器
+│  ├─ PixelLoomMCP.exe     AI 客户端调用的 MCP 入口
+│  └─ _internal/           必需运行库，和两个 exe 一起保留
+└─ project/                完整源码与开发文件
+```
+
+### 已经 git clone，却找不到 exe？
+
+这是源码下载方式的正常结果。**直接使用请下载 Windows 便携版**；想从源码运行，按[第 6 节](#6-开发和开源)先进入 `project` 目录安装依赖再启动。
+
+| 你要做什么 | 使用哪个入口 |
+|---|---|
+| 打开便携版画画、看作品 | `打开像素织机.cmd`，或 `app/PixelLoom.exe` |
+| 让 AI 接入便携版 | 在 AI 客户端注册 `app/PixelLoomMCP.exe`，参数 `--mcp` |
+| 从源码运行／开发 | 先进入含 `pyproject.toml` 的 `project` 目录，见第 6 节 |
+
+如果你已经进入 `app` 目录，直接运行里面的 `PixelLoom.exe`。`pixel_workbench` 是源码模块名；当前桌面程序名是 `PixelLoom.exe`，无需寻找 `Pixel_workbench.exe`。`PixelLoomMCP.exe` 由 AI 客户端启动，手动双击后的控制台不是编辑器窗口。
 
 启动后会显示使用说明。点击“了解，进入”、按 Esc 或关闭说明即可直接使用全部功能。打赏完全自愿；选择 5／10／15／20 元后显示作者提供的对应微信收款图，不检测付款、不解锁额外功能。
 
@@ -114,7 +140,7 @@ AI 先读 `pixel_help(topic="cleanup")`。使用 `pixel_storage(action="status")
 
 ## 6. 开发和开源
 
-完整源码和正式测试都在 `project`，在该目录执行开发命令：
+完整源码和正式测试都在 `project`。需要 **Python 3.11+**，桌面模式还需要 Tk（Windows 标准 Python 通常自带）。以下命令从克隆／源码 ZIP 解压后的仓库根目录执行；若当前目录已经有 `pyproject.toml`，则跳过第一行：
 
 ```powershell
 Set-Location .\project
@@ -122,6 +148,8 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e .
 .\.venv\Scripts\python.exe -m pixel_workbench
 ```
+
+Windows 也可以在 `project` 文件夹运行 `setup.ps1` 完成首次安装，再运行同目录的 `打开像素织机.cmd` 或 `launch.ps1`。源码安装不生成 `app/PixelLoom.exe`；从源码启动用上面的 Python 命令。克隆仓库不等于已经安装依赖。
 
 测试命令、架构和打包方法见 [项目说明](project/README.md)、[贡献说明](project/CONTRIBUTING.md) 和 [发布流程](project/docs/RELEASE.md)。不要把运行库当作可清理缓存，也不要把验证时生成的工程、日志或虚拟环境加入交付。
 

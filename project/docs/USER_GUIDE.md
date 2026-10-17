@@ -4,7 +4,7 @@
 
 一个让人和 AI 共用工程的本地像素画与动画编辑器。你可以手动画，支持 MCP 的桌面 AI 可以直接调用原生绘图工具，读取像素、检查图片、修改局部和导出素材。
 
-**当前版本：0.7.7 公开测试版。** Windows 桌面端已进行本机测试；提供可选无窗口后端与跨平台 CI 配置。尚未达到 Aseprite 的完整功能和成熟度。
+本手册持续维护，当前软件版本与下载入口见 [README](../README.md) 和[公开发布页](https://github.com/yangsir2077/pixel-loom/releases)。Windows 桌面端已进行本机测试；提供可选无窗口后端与跨平台 CI 配置。尚未达到 Aseprite 的完整功能和成熟度。
 
 ## 检查更新
 
@@ -22,23 +22,41 @@
 
 ### Windows 便携版
 
-解压整个 `PixelLoom` 文件夹，双击 `PixelLoom.exe`。保留同目录的 `PixelLoomMCP.exe` 和 `_internal` 文件夹。便携版内置 Python 运行库。
+**普通使用者优先选这一种，不需要另装 Python。**
+
+1. 到[发布页](https://github.com/yangsir2077/pixel-loom/releases)，在 **Assets（资源）** 中选择 `pixel-loom-<版本>-windows-x64.zip`。
+2. 完整解压，打开解压后的 `PixelLoom` 根目录，双击 **打开像素织机.cmd**；也可以进入 **app** 目录，双击 **PixelLoom.exe**。
+3. 保留整个 `app` 目录：`PixelLoom.exe`、`PixelLoomMCP.exe` 和 `_internal` 必须放在一起。
+
+```text
+PixelLoom/打开像素织机.cmd       普通用户启动入口
+PixelLoom/app/PixelLoom.exe      桌面编辑器
+PixelLoom/app/PixelLoomMCP.exe   AI 客户端的 MCP 入口
+PixelLoom/app/_internal/         必需运行库
+```
+
+如果已经进入 `app`，直接运行当前目录的 `PixelLoom.exe`。当前没有名为 `Pixel_workbench.exe` 的桌面入口；`pixel_workbench` 是源码模块名。`PixelLoomMCP.exe` 需要由 AI 客户端以 stdio 方式启动，手动双击不是打开编辑器的方法。
 
 本地 AI 服务随软件启动，默认就绪。首次接入时，通过顶部 **更多 → MCP 首次接入配置** 复制本机配置，在客户端添加并重新加载 MCP。之后 AI 调用 `pixel_onboard` 即可读取工程、工具说明和操作流程，无需在软件中再次开启。
 
+### git clone 后找不到 exe？
+
+`git clone`、GitHub **Code → Download ZIP**、`*-source.zip` 和 **Source code** 都提供源码，不包含便携版的 `app` 和 exe。要直接使用，下载上面的 Windows 便携版；要从源码运行，按下一节安装。无需在克隆目录反复寻找或重命名 exe。
+
 ### 从源码安装
 
-需要 Python 3.11+，桌面模式还需要 Tk（Windows 标准 Python 通常自带）。
+需要 Python 3.11+，桌面模式还需要 Tk（Windows 标准 Python 通常自带）。以下从克隆／源码 ZIP 解压后的仓库根目录执行；若当前目录已包含 `pyproject.toml`，跳过第一行：
 
 ```powershell
+Set-Location .\project
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e .
-.\.venv\Scripts\pixel-loom.exe
+.\.venv\Scripts\python.exe -m pixel_workbench
 ```
 
-也可以运行 `setup.ps1`，再双击 `打开像素织机.cmd`。Linux/macOS 可在虚拟环境里 `python -m pip install -e .`；桌面适配尚未完成完整验证。
+Windows 也可以在 `project` 目录运行 `setup.ps1`，再双击同目录的 `打开像素织机.cmd` 或运行 `launch.ps1`。源码安装不会生成便携版的 `app/PixelLoom.exe`。Linux/macOS 同样先进入含 `pyproject.toml` 的源码目录，再在虚拟环境中安装、启动；桌面适配尚未完成完整验证。
 
-从源码生成本机 MCP 配置：
+从源码生成本机 MCP 配置（在含 `pyproject.toml` 的源码目录执行）：
 
 ```powershell
 .\.venv\Scripts\pixel-loom-config.exe --format both
@@ -146,7 +164,7 @@ MCP 新增 `pixel_review_settings`、`pixel_review`、`pixel_review_submit` 和 
 -m pixel_workbench --mcp
 ```
 
-便携版使用 `PixelLoomMCP.exe`，参数为 `--mcp`。GUI 程序与 MCP 程序分开，保证 JSON-RPC 的 stdin/stdout 正常工作。
+便携版命令使用解压根目录中 `app/PixelLoomMCP.exe` 的真实绝对路径，参数为 `--mcp`。源码版使用安装好依赖的 `project/.venv/Scripts/python.exe` 的绝对路径，加上上面的参数。GUI 程序与 MCP 程序分开，保证 JSON-RPC 的 stdin/stdout 正常工作。按“开始使用”中的实际目录选择入口；读取说明本身不会注册 MCP。
 
 可以直接对 AI 说：
 

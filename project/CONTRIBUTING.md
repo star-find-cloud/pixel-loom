@@ -1,6 +1,6 @@
 # Contributing
 
-Install Python 3.11+ and a virtual environment, then run `python -m pip install -e '.[dev]'`.
+Start in the source directory containing `pyproject.toml`: from the root of a Git clone or the complete source ZIP, run `cd project` first. Install Python 3.11+ and a virtual environment, then run `python -m pip install -e '.[dev]'` with that environment activated. A source checkout does not include the portable Windows executables; normal users can download the Windows asset from [Releases](https://github.com/yangsir2077/pixel-loom/releases).
 
 ```sh
 python -m unittest discover -s tests -v
