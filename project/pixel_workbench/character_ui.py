@@ -12,7 +12,7 @@ from .model import Document, PixelError
 from .motion import analyze_motion, evidence
 from .quality import content_digest
 from .reference import decoded_asset
-from .ui import BG, PANEL, FIELD, FG, MUTED, FONT, SMALL
+from .ui import BG, PANEL, FIELD, FG, MUTED, FONT, SMALL, scrollable_widget
 
 VIEW_LABELS = {"front": "正面", "left": "左侧", "right": "右侧", "back": "背面"}
 KINDS = {"orphan_pixels": "独立小块", "fixed_region": "固定部位变化", "palette_drift": "颜色偏移",
@@ -68,9 +68,9 @@ class CharacterDialog:
         right.pack(side="left", fill="both", expand=True)
         editor.label(right, "固定部位（可选，最多 8 个）").pack(anchor="w")
         editor.label(right, "只保护此动作中应当不变的区域。", MUTED).pack(anchor="w", pady=(2, 4))
-        self.parts = tk.Listbox(right, height=4, selectmode="multiple", exportselection=False,
-                                bg=FIELD, fg=FG, selectbackground="#36517c", font=FONT)
-        self.parts.pack(fill="x")
+        parts_frame, self.parts = scrollable_widget(right, tk.Listbox, horizontal=True, height=4,
+            selectmode="multiple", exportselection=False, bg=FIELD, fg=FG, selectbackground="#36517c", font=FONT)
+        parts_frame.pack(fill="x")
         editor.button(right, "把画布选区设为固定部位…", self.add_region).pack(fill="x", pady=6)
         self.role = tk.StringVar(value="左侧")
         refrow = tk.Frame(right, bg=PANEL)

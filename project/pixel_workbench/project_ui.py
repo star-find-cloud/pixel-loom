@@ -10,7 +10,7 @@ from PIL import Image, ImageTk
 
 from .model import Document
 from .projects import frame_at
-from .ui import BG, PANEL, FIELD, FG, MUTED, SMALL, place_dialog
+from .ui import BG, PANEL, FIELD, FG, MUTED, SMALL, place_dialog, scrollable_widget
 
 
 class ProjectManagerDialog:
@@ -82,6 +82,9 @@ class ProjectManagerDialog:
             entries=self.editor.service.projects.listing(self.editor.path,deleted=deleted)
             signature=tuple((e['id'],e['name'],e['frames'],e['width'],e['height'],e['active'],e['available']) for e in entries)
             if getattr(tree,'project_signature',None)==signature:continue
+            old_rows=tree.get_children()
+            top_index=min(len(old_rows)-1,int(tree.yview()[0]*len(old_rows))) if old_rows else None
+            top_id=old_rows[top_index] if top_index is not None else None
             tree.project_signature=signature
             tree.delete(*tree.get_children())
             for entry in entries:
@@ -89,6 +92,8 @@ class ProjectManagerDialog:
                 tree.insert('','end',iid=entry['id'],values=(entry['number'],entry['name'],f"{entry['width']}×{entry['height']} · {entry['frames']}帧",status))
             kept=[key for key in selected if tree.exists(key)]
             if kept:tree.selection_set(kept)
+            if top_id and tree.exists(top_id):
+                tree.yview_moveto(tree.index(top_id)/max(1,len(entries)))
         self.update_selection()
 
     def update_selection(self):
@@ -299,8 +304,9 @@ class HistoryDialog:
         editor.button(actions,'下一页',lambda:self.turn(1),font=SMALL).pack(side='right',padx=5)
         self.page_label=editor.label(actions,'',MUTED,SMALL)
         self.page_label.pack(side='right',padx=8)
-        self.listing = tk.Listbox(d,bg=BG,fg=FG,selectbackground=FIELD,relief='flat',font=SMALL,height=5,exportselection=False,selectmode='extended')
-        self.listing.pack(fill='x',padx=18)
+        list_frame, self.listing = scrollable_widget(d,tk.Listbox,horizontal=True,bg=BG,fg=FG,
+            selectbackground=FIELD,relief='flat',font=SMALL,height=5,exportselection=False,selectmode='extended')
+        list_frame.pack(fill='x',padx=18)
         pictures = tk.Frame(d,bg=PANEL)
         pictures.pack(fill='both',expand=True,padx=18,pady=10)
         self.views, self.details = [], []

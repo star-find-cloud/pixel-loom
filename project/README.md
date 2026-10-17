@@ -4,7 +4,7 @@
 
 面向 AI 的像素创作工具，以及供用户查看、创作和修改作品的可视化编辑器。配套说明帮助 AI 使用通用绘图与动画工具；用户直观看到产物、手动修细节，并使用导入、保存、导出和版本记录。支持 MCP 的 AI 客户端通过标准 **MCP / stdio** 直接调用原生工具。免费开源，采用 [MIT](LICENSE) 许可。
 
-**0.7.14 公开测试版。** 整合按任务读取的 MCP 工作流、可编辑分层检查、简要状态和重复预览复用。抠图仍按需使用，默认导入/转换保留背景；补齐遮挡处和动画由用户另行要求。Windows 桌面端经过本机测试；其他平台尚未完整验证。
+**0.7.15 公开测试版。** 合并顶栏、突出画布；图层、调色板和批量操作分成独立页，帧时长集中到时间轴。修复滚动事件被抢走、刷新跳回顶部和长时间轴后续帧显示不全，保留既有 MCP 工作流和全部原生功能。抠图仍按需使用，默认导入/转换保留背景；补齐遮挡处和动画由用户另行要求。Windows 桌面端经过本机测试；其他平台尚未完整验证。
 
 源码位于仓库的 `project/` 目录；本文也随便携版放在 `app/` 中。**源码命令必须在含 `pyproject.toml` 的目录执行**，便携版启动则从解压后的 `PixelLoom` 根目录开始。`tests/` 是保留给开源维护的正式测试；临时工程、日志和构建缓存不随交付分发。
 
@@ -12,7 +12,7 @@
 
 ### 方式一：下载 Windows 便携版（推荐）
 
-1. 打开 [GitHub Releases](https://github.com/yangsir2077/pixel-loom/releases)，在 **Assets（资源）** 下载 `pixel-loom-<版本>-windows-x64.zip`。当前[直接下载 0.7.14 Windows 便携版](https://github.com/yangsir2077/pixel-loom/releases/download/v0.7.14/pixel-loom-0.7.14-windows-x64.zip)。
+1. 打开 [GitHub Releases](https://github.com/yangsir2077/pixel-loom/releases)，在 **Assets（资源）** 下载 `pixel-loom-<版本>-windows-x64.zip`。当前[直接下载 0.7.15 Windows 便携版](https://github.com/yangsir2077/pixel-loom/releases/download/v0.7.15/pixel-loom-0.7.15-windows-x64.zip)。
 2. 解压**整个** `PixelLoom` 文件夹，双击根目录的 `打开像素织机.cmd`，或打开 `app/PixelLoom.exe`。保留完整 `app` 文件夹，包含 `PixelLoomMCP.exe` 和 `_internal`；只拷贝一个 exe 不能运行。
 3. 便携版内置 Python 运行库，不需要另装 Python。
 

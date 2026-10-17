@@ -36,6 +36,10 @@ jobs:
         if: runner.os == 'Windows'
       - run: python -m tests.gui_editing_smoke
         if: runner.os == 'Windows'
+      - run: python -m tests.gui_overflow_smoke
+        if: runner.os == 'Windows'
+      - run: python -m tests.gui_layout_smoke
+        if: runner.os == 'Windows'
       - run: python -m tests.gui_cutout_smoke
         if: runner.os == 'Windows'
       - run: python -m tests.gui_updates_smoke

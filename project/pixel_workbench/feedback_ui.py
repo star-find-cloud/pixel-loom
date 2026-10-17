@@ -203,7 +203,7 @@ class LegacyFeedbackPanel:
                 self.queue.selection_set(self.issue_ids.index(self.selected_id))
             self.render_issue()
         if info.get("needs_clarification_count"):
-            self.editor.workflow_hint.config(text=f"AI 有 {info['needs_clarification_count']} 个问题需要你确认",fg=MARK)
+            self.editor.status_label.config(text=f"AI 有 {info['needs_clarification_count']} 个问题需要你确认",fg=MARK)
         self.update_mark()
 
     def select(self,event=None):
@@ -385,7 +385,7 @@ class FeedbackPanel:
 
     def show_mode(self,mode):
         if mode=="feedback":
-            self.parent.pack(fill="x",before=self.editor.canvas_settings)
+            self.parent.pack(fill="x",before=self.editor.canvas)
         else:
             self.parent.pack_forget()
         self.update_mark()

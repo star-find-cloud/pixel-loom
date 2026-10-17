@@ -14,15 +14,15 @@ from .workflows import animation_plan
 from .quality import pending_feedback
 from .messages import user_error
 
-BG = "#11141b"
-PANEL = "#1a1f2b"
-FIELD = "#252d3d"
-EDGE = "#303a4d"
-FG = "#e8edf7"
-MUTED = "#97a6bf"
-ACCENT = "#94b8ff"
+BG = "#10141b"
+PANEL = "#181e28"
+FIELD = "#242c39"
+EDGE = "#2d3746"
+FG = "#e6ebf3"
+MUTED = "#929fb3"
+ACCENT = "#a8bfff"
 GREEN = "#7edcc3"
-FONT = ("Microsoft YaHei UI", 10)
+FONT = ("Microsoft YaHei UI", 9)
 SMALL = ("Microsoft YaHei UI", 9)
 TOOL_INFO = {
     "pen": ("铅笔", "B", "拖动绘画；右键取色。支持对称绘画。"),
@@ -42,12 +42,71 @@ TOOL_INFO = {
 }
 
 
+def bind_scroll_wheel(widget, command, units=3, horizontal=None):
+    """A nested scroller consumes its wheel; siblings and the artwork do not move."""
+    def scroll(event):
+        delta, button = getattr(event, "delta", 0), getattr(event, "num", None)
+        if delta or button in (4, 5):
+            direction = -1 if button == 4 or delta > 0 else 1
+            steps = max(1, int(abs(delta) / 120)) if delta else 1
+            target = horizontal if horizontal and getattr(event, "state", 0) & 1 else command
+            target(direction * steps * units, "units")
+        return "break"
+    widget._owns_mousewheel = True
+    for sequence in ("<MouseWheel>", "<Shift-MouseWheel>", "<Button-4>", "<Button-5>"):
+        widget.bind(sequence, scroll)
+
+
+def scrollable_widget(parent, widget_type, *, horizontal=False, **options):
+    """Return a container and a native list/text widget with reachable overflow."""
+    frame = tk.Frame(parent, bg=parent.cget("bg"))
+    frame.columnconfigure(0, weight=1)
+    frame.rowconfigure(0, weight=1)
+    widget = widget_type(frame, **options)
+    widget.grid(row=0, column=0, sticky="nsew")
+    vertical = ttk.Scrollbar(frame, orient="vertical", command=widget.yview)
+    vertical.grid(row=0, column=1, sticky="ns")
+    widget.config(yscrollcommand=vertical.set)
+    widget.vertical_scrollbar = vertical
+    horizontal_command = widget.xview_scroll if horizontal else None
+    for item in (widget, vertical):
+        bind_scroll_wheel(item, widget.yview_scroll, horizontal=horizontal_command)
+    if horizontal:
+        bar = ttk.Scrollbar(frame, orient="horizontal", command=widget.xview)
+        bar.grid(row=1, column=0, sticky="ew")
+        widget.config(xscrollcommand=bar.set)
+        widget.horizontal_scrollbar = bar
+        bind_scroll_wheel(bar, widget.xview_scroll)
+    return frame, widget
+
+
 def place_dialog(dialog, parent, width, height):
     width = min(width, parent.winfo_screenwidth()-60)
     height = min(height, parent.winfo_screenheight()-85)
     x = max(0, min(parent.winfo_screenwidth()-width-20, parent.winfo_rootx()+(parent.winfo_width()-width)//2))
     y = max(0, min(parent.winfo_screenheight()-height-60, parent.winfo_rooty()+(parent.winfo_height()-height)//2))
     dialog.geometry(f"{width}x{height}+{x}+{y}")
+
+
+def dark_titlebar(window):
+    """Best-effort native chrome; unsupported desktops keep their normal title bar."""
+    import sys
+    if sys.platform != "win32":
+        return
+    try:
+        import ctypes
+        ctypes.windll.user32.GetParent.argtypes = [ctypes.c_void_p]
+        ctypes.windll.user32.GetParent.restype = ctypes.c_void_p
+        ctypes.windll.dwmapi.DwmSetWindowAttribute.argtypes = [ctypes.c_void_p,ctypes.c_ulong,ctypes.c_void_p,ctypes.c_ulong]
+        window.update_idletasks()
+        handle = ctypes.windll.user32.GetParent(window.winfo_id()) or window.winfo_id()
+        enabled = ctypes.c_int(1)
+        for attribute in (20, 19):
+            if ctypes.windll.dwmapi.DwmSetWindowAttribute(handle, attribute,
+                    ctypes.byref(enabled), ctypes.sizeof(enabled)) == 0:
+                break
+    except (AttributeError, OSError, tk.TclError):
+        pass
 
 
 class Tooltip:
@@ -184,26 +243,54 @@ class DesktopUI:
         canvas.pack(side="left", fill="both", expand=True)
         canvas.config(yscrollcommand=scroll.set)
         frame = tk.Frame(canvas, bg=PANEL, padx=14, pady=2)
+        frame._dock_canvas = canvas
         window = canvas.create_window(0, 0, window=frame, anchor="nw")
         frame.bind("<Configure>", lambda e: canvas.config(scrollregion=canvas.bbox("all")))
         canvas.bind("<Configure>", lambda e: canvas.itemconfig(window, width=e.width))
         # Local bindings: scrolling this dock must never change the canvas zoom.
         def bind_scroll(widget):
-            widget.bind("<MouseWheel>", lambda e: (canvas.yview_scroll(-1 if e.delta > 0 else 1, "units"), "break")[-1], add="+")
+            if not getattr(widget, "_owns_mousewheel", False):
+                bind_scroll_wheel(widget, canvas.yview_scroll, units=1)
             for child in widget.winfo_children():
                 bind_scroll(child)
         self.root.after_idle(lambda: bind_scroll(frame) if frame.winfo_exists() else None)
         frame.bind("<Map>", lambda e: bind_scroll(frame), add="+")
         return frame
 
+    def bind_panel_scroll(self, widget):
+        parent = widget.master
+        while parent is not None:
+            canvas = getattr(parent, "_dock_canvas", None)
+            if canvas is not None:
+                bind_scroll_wheel(widget, canvas.yview_scroll, units=1)
+                return
+            parent = parent.master
+
     def _build(self):
         style = ttk.Style(self.root)
         style.theme_use("clam")
-        style.configure("TNotebook", background=PANEL, borderwidth=0, tabmargins=0)
-        style.configure("TNotebook.Tab", background=PANEL, foreground=MUTED, padding=(14, 9), font=SMALL)
+        style.configure("TNotebook", background=PANEL, borderwidth=0, tabmargins=0,
+                        bordercolor=PANEL,lightcolor=PANEL,darkcolor=PANEL)
+        style.configure("TNotebook.Tab", background=PANEL, foreground=MUTED, padding=(16, 8), font=SMALL,
+                        borderwidth=0,bordercolor=PANEL,lightcolor=PANEL,darkcolor=PANEL,focuscolor=FIELD)
         style.map("TNotebook.Tab", background=[("selected", FIELD)], foreground=[("selected", ACCENT)])
-        style.configure("Vertical.TScrollbar", background=EDGE, troughcolor=PANEL, bordercolor=PANEL, arrowcolor=MUTED)
-        style.configure("Horizontal.TScrollbar", background=EDGE, troughcolor=PANEL, bordercolor=PANEL, arrowcolor=MUTED)
+        self._tab_surfaces=[]
+        for background,line in ((PANEL,EDGE),(FIELD,ACCENT)):
+            surface=tk.PhotoImage(master=self.root,width=4,height=4)
+            surface.put(background,to=(0,0,4,4));surface.put(line,to=(0,3,4,4))
+            self._tab_surfaces.append(surface)
+        style.element_create("LoomNotebook.tab","image",self._tab_surfaces[0],
+                             ("selected",self._tab_surfaces[1]),border=(0,0,0,1),sticky="nsew")
+        style.layout("TNotebook.Tab",[("LoomNotebook.tab",{"sticky":"nsew","children":[
+            ("Notebook.padding",{"sticky":"nsew","children":[("Notebook.label",{"sticky":"nsew"})]})]})])
+        for orientation in ("Vertical","Horizontal"):
+            name=orientation+".TScrollbar"
+            element=orientation+".Scrollbar."
+            style.layout(name,[(element+"trough",{"sticky":"nswe","children":[
+                (element+"thumb",{"expand":"1","sticky":"nswe"})]})])
+            style.configure(name,background=EDGE,troughcolor=PANEL,bordercolor=PANEL,lightcolor=EDGE,
+                            darkcolor=EDGE,arrowcolor=MUTED,width=9,borderwidth=0,gripcount=0)
+            style.map(name,background=[("active","#46566c"),("pressed","#566d89")])
         self.symmetry_var = tk.StringVar(value="关闭对称")
         self.duration_var = tk.IntVar(value=100)
         self.opacity_var = tk.IntVar(value=255)
@@ -211,14 +298,15 @@ class DesktopUI:
         self._palette_signature = None
         self._frame_signature = None
         self.frame_buttons = []
-        top = tk.Frame(self.root, bg=PANEL, padx=16, pady=6)
+        top = tk.Frame(self.root, bg=PANEL, padx=16, pady=9)
+        self.header = self.workflow_bar = top
         top.pack(fill="x")
-        logo = tk.Canvas(top, width=30, height=30, bg=PANEL, highlightthickness=0)
+        logo = tk.Canvas(top, width=24, height=24, bg=PANEL, highlightthickness=0)
         logo.pack(side="left", padx=(0, 10))
-        for x, y, color in [(0, 0, ACCENT), (14, 0, GREEN), (0, 14, "#718aba"), (14, 14, ACCENT)]:
-            logo.create_rectangle(x+2, y+2, x+12, y+12, fill=color, outline="")
-        self.label(top, "PIXEL LOOM", font=("Segoe UI", 15, "bold")).pack(side="left")
-        self.label(top, f"  {__version__}   /   像素织机", MUTED, SMALL).pack(side="left", padx=(0, 18))
+        for x, y, color in [(0, 0, ACCENT), (11, 0, GREEN), (0, 11, "#718aba"), (11, 11, ACCENT)]:
+            logo.create_rectangle(x+1, y+1, x+9, y+9, fill=color, outline="")
+        self.label(top, "PIXEL LOOM", font=("Segoe UI", 12, "bold")).pack(side="left")
+        self.label(top, __version__, MUTED, ("Segoe UI", 8)).pack(side="left", padx=(9, 18))
         file_button=tk.Menubutton(top,text="文件 ▾",bg=PANEL,fg=FG,activebackground=FIELD,
                                   activeforeground=FG,relief="flat",font=SMALL,padx=8,pady=6)
         file_menu=tk.Menu(file_button,tearoff=False,bg=FIELD,fg=FG)
@@ -228,10 +316,23 @@ class DesktopUI:
             file_menu.add_command(label=text,command=callback)
         file_button.config(menu=file_menu)
         file_button.pack(side="left",padx=(0,8))
+        shelf_menu=tk.Menubutton(top,text='项目 ▾',bg=PANEL,fg=FG,font=SMALL,relief='flat',padx=8,pady=6,
+                                activebackground=FIELD,activeforeground=FG)
+        self.project_menu=tk.Menu(shelf_menu,tearoff=False,bg=FIELD,fg=FG)
+        shelf_menu.config(menu=self.project_menu)
+        shelf_menu.pack(side='left')
+        workflow=tk.Frame(top,bg=BG,padx=3,pady=3)
+        workflow.pack(side='left',padx=18)
+        self.mode_buttons={}
+        for mode,title in [("preview","预览"),("feedback","截图反馈"),("manual","手动修改")]:
+            b=self.button(workflow,title,lambda m=mode:self.set_workspace_mode(m),font=SMALL,
+                          pady=4,padx=11,bg=BG,fg=MUTED)
+            b.pack(side="left",padx=1)
+            self.mode_buttons[mode]=b
         for text, callback, accent in [("导出", self.export_dialog, True), ("保存", self.save, False),
                                       ("导入参考", self.reference_dialog, False)]:
             self.button(top, text, callback, accent, pady=6).pack(side="right", padx=3)
-        more=tk.Menubutton(top,text="更多 ▾",bg=FIELD,fg=FG,activebackground=EDGE,activeforeground=FG,
+        more=tk.Menubutton(top,text="更多 ▾",bg=PANEL,fg=MUTED,activebackground=FIELD,activeforeground=FG,
                            relief="flat",font=SMALL,padx=10,pady=6)
         more_menu=tk.Menu(more,tearoff=False,bg=FIELD,fg=FG)
         for text,callback in [("检查成品",self.quality_dialog),("动画总览",self.overview_dialog),
@@ -247,24 +348,9 @@ class DesktopUI:
             more_menu.add_command(label=text,command=callback)
         more.config(menu=more_menu)
         more.pack(side="right",padx=5)
-        workflow=tk.Frame(self.root,bg=BG,padx=16,pady=4)
-        self.workflow_bar = workflow
-        workflow.pack(fill="x")
-        self.mode_buttons={}
-        for mode,title in [("preview","1  预览成品"),("feedback","2  截图反馈"),("manual","3  手动修改")]:
-            b=self.button(workflow,title,lambda m=mode:self.set_workspace_mode(m),font=SMALL,pady=5,padx=12)
-            b.pack(side="left",padx=(0,6))
-            self.mode_buttons[mode]=b
-        self.workflow_hint=self.label(workflow,"看成品、截图发给 AI，也能自己动手改。",MUTED,SMALL)
-        self.workflow_hint.pack(side="left",padx=12)
-
-        shelf=tk.Frame(self.root,bg=BG,padx=16,pady=1)
+        shelf=tk.Frame(self.root,bg=BG,padx=14,pady=6)
         self.project_shelf = shelf
         shelf.pack(fill="x")
-        shelf_menu=tk.Menubutton(workflow,text='项目 ▾',bg=FIELD,fg=FG,font=SMALL,relief='flat',padx=10,pady=5)
-        self.project_menu=tk.Menu(shelf_menu,tearoff=False,bg=FIELD,fg=FG)
-        shelf_menu.config(menu=self.project_menu)
-        shelf_menu.pack(side='right')
         self.project_scroll_left=self.button(shelf,'‹',lambda:self.scroll_projects(-1),font=SMALL,padx=8,pady=5)
         self.project_scroll_left.pack(side='left',padx=(0,4))
         self.project_all_button=self.button(shelf,'全部项目',self.manage_projects_dialog,font=SMALL,pady=5)
@@ -275,9 +361,8 @@ class DesktopUI:
         self.project_tabs_view.pack(side='left',fill='x',expand=True)
         self.project_tabs_canvas=tk.Canvas(self.project_tabs_view,bg=BG,height=30,highlightthickness=0,xscrollincrement=1)
         self.project_tabs_canvas.pack(fill='x',expand=True)
-        self.project_scrollbar=tk.Scrollbar(self.project_tabs_view,orient='horizontal',
-            command=self.project_tabs_canvas.xview,width=8,bd=0,highlightthickness=0,
-            bg=FIELD,activebackground=ACCENT,troughcolor=BG)
+        self.project_scrollbar=ttk.Scrollbar(self.project_tabs_view,orient='horizontal',
+            command=self.project_tabs_canvas.xview)
         self.project_tabs_canvas.config(xscrollcommand=self.project_scroll_changed)
         self.project_tabs=tk.Frame(self.project_tabs_canvas,bg=BG)
         self.project_tabs_canvas.create_window((0,0),window=self.project_tabs,anchor="nw")
@@ -292,28 +377,34 @@ class DesktopUI:
         self.project_tabs_signature=None
 
         # Pack the footer and timeline first: the canvas gets the remaining height.
-        footer = tk.Frame(self.root, bg=BG, padx=16, pady=4)
+        footer = tk.Frame(self.root, bg=BG, padx=16, pady=5)
         footer.pack(side="bottom", fill="x")
         self.status_label = self.label(footer, "就绪 · 所有绘画操作均可撤销", MUTED, SMALL)
         self.status_label.pack(side="left")
         self.coordinates_label = self.label(footer, "", MUTED, ("Consolas", 9))
         self.coordinates_label.pack(side="right")
         self.main_panes = tk.PanedWindow(self.root, orient="vertical", bg=EDGE, bd=0,
-                                         sashwidth=6, sashrelief="flat", opaqueresize=True)
-        self.main_panes.pack(fill="both", expand=True, padx=10, pady=(4, 0))
+                                         sashwidth=5, sashrelief="flat", opaqueresize=True)
+        self.main_panes.pack(fill="both", expand=True, padx=12, pady=(2, 0))
         timeline = tk.Frame(self.main_panes, bg=PANEL, padx=12, pady=6)
         self.timeline = timeline
         row = tk.Frame(timeline, bg=PANEL)
         row.pack(fill="x")
-        self.label(row, "动画时间轴", font=("Microsoft YaHei UI", 10, "bold")).pack(side="left", padx=(0, 14))
+        self.label(row, "时间轴", font=("Microsoft YaHei UI", 9, "bold")).pack(side="left", padx=(0, 12))
         self.play_button = self.button(row, "▶ 播放", self.toggle_play, True, pady=4)
         self.play_button.pack(side="left", padx=3)
-        self.button(row, "■ 停止", self.stop_animation, pady=4, padx=8).pack(side="left", padx=3)
-        self.label(row, "速度", MUTED, SMALL).pack(side="left", padx=(8, 2))
+        stop=self.button(row, "■", self.stop_animation, pady=4, padx=7)
+        stop.pack(side="left", padx=3)
+        Tooltip(stop,"停止播放，回到第一帧")
         self.speed_menu = self._option(row, self.playback_speed,
                                       ["0.25×", "0.5×", "0.75×", "1×", "1.25×", "1.5×", "2×", "3×", "4×"],
                                       command=self.set_playback_speed)
         self.speed_menu.pack(side="left", padx=(0, 7))
+        self._entry(row,self.duration_var,5).pack(side="left",padx=(6,3),ipady=3)
+        self.label(row,"ms",MUTED,SMALL).pack(side="left")
+        duration_button=self.button(row,"应用",self.apply_duration,pady=4,padx=7,font=SMALL)
+        duration_button.pack(side="left",padx=(4,10))
+        Tooltip(duration_button,"设置当前帧时长；批量修改可用右侧“操作”")
         for text, callback in [("+ 帧", lambda: self.apply([{"op": "frame_add"}], "复制动画帧")),
                                ("动画设置", self.tags_dialog), ("逐帧总览", self.overview_dialog)]:
             self.button(row, text, callback, pady=4, padx=8).pack(side="left", padx=3)
@@ -321,33 +412,38 @@ class DesktopUI:
         self.tag_menu.pack(side="left", padx=6)
         self.frame_info = self.label(row, "", MUTED, SMALL)
         self.frame_info.pack(side="right")
-        self.frame_canvas = tk.Canvas(timeline, bg=PANEL, height=84, highlightthickness=0)
+        self.timing_hint = self.label(row,"",MUTED,("Segoe UI",8))
+        self.timing_hint.pack(side="right",padx=12)
+        self.frame_canvas = tk.Canvas(timeline, bg=PANEL, height=84, highlightthickness=0, xscrollincrement=1)
         self.frame_canvas.pack(fill="both", expand=True, pady=(5, 0))
         scroll = ttk.Scrollbar(timeline, orient="horizontal", command=self.frame_canvas.xview)
         scroll.pack(fill="x")
         self.frame_canvas.config(xscrollcommand=scroll.set)
         self.frames_widget = tk.Frame(self.frame_canvas, bg=PANEL)
         self.frame_canvas.create_window((0, 0), window=self.frames_widget, anchor="nw")
-        self.frame_canvas.bind("<MouseWheel>", lambda e: self.frame_canvas.xview_scroll(-1 if e.delta > 0 else 1, "units"))
+        bind_scroll_wheel(self.frame_canvas, self.frame_canvas.xview_scroll, units=83)
+        bind_scroll_wheel(self.frames_widget, self.frame_canvas.xview_scroll, units=83)
+        self.frame_canvas.bind("<Configure>", self.frame_view_resized)
 
         workspace = tk.Frame(self.main_panes, bg=BG)
         self.workspace=workspace
         self.main_panes.add(workspace, minsize=200, stretch="always")
         self.main_panes.add(timeline, minsize=105, height=self.layout_size("timeline_height", 145, 105, 350), stretch="never")
         self.main_panes.bind("<ButtonRelease-1>", self.save_ui_layout)
-        rail = tk.Frame(workspace, bg=PANEL, padx=7, pady=10)
+        rail = tk.Frame(workspace, bg=PANEL, padx=6, pady=8)
         self.tool_rail=rail
         rail.pack(side="left", fill="y", padx=(0, 8))
-        self.rail_title=self.label(rail, "绘画工具", MUTED, SMALL)
-        self.rail_title.pack(pady=(0, 9))
+        self.rail_title=self.label(rail, "工具", MUTED, ("Microsoft YaHei UI",8))
+        self.rail_title.pack(pady=(0, 8))
         grid = tk.Frame(rail, bg=PANEL)
         grid.pack()
         self.tool_buttons, self.tool_icons = {}, {}
         for index, (tool, (name, key, hint)) in enumerate(TOOL_INFO.items()):
             icon = tool_icon(tool)
             self.tool_icons[tool] = icon
-            button = self.button(grid, f"{name} {key}", lambda t=tool: self.choose_tool(t),
-                                 image=icon, compound="top", width=53, height=48, padx=3, pady=3, font=("Microsoft YaHei UI", 8))
+            button = self.button(grid, name, lambda t=tool: self.choose_tool(t),
+                                 image=icon, compound="top", width=38, height=40, padx=3, pady=3,
+                                 font=("Microsoft YaHei UI", 8),bg=PANEL)
             button.grid(row=index//2, column=index%2, padx=2, pady=3)
             Tooltip(button, f"{name}  [{key}]\n{hint}")
             self.tool_buttons[tool] = button
@@ -372,12 +468,12 @@ class DesktopUI:
         dock = tk.Frame(self.editor_panes, bg=PANEL, width=310)
         self.editor_dock=dock
         dock.pack_propagate(False)
-        preview = tk.Frame(dock, bg=PANEL, padx=14, pady=10)
+        preview = tk.Frame(dock, bg=PANEL, padx=12, pady=8)
         self.navigator_panel=preview
         preview.pack(fill="x")
-        self.label(preview, "导航预览", font=("Microsoft YaHei UI", 9, "bold")).pack(anchor="w")
+        self.label(preview, "缩略预览", MUTED, ("Microsoft YaHei UI", 8)).pack(anchor="w")
         self.preview_widget = tk.Label(preview, bg=BG, height=0, cursor="hand2")
-        self.preview_widget.pack(fill="x", pady=(8, 5))
+        self.preview_widget.pack(fill="x", pady=(5, 3))
         self.preview_widget.bind("<Button-1>", lambda e: self.fit())
         Tooltip(self.preview_widget, "单击适应窗口；动画播放时同步预览")
         self.preview_info = self.label(preview, "", MUTED, SMALL)
@@ -385,14 +481,18 @@ class DesktopUI:
         notebook = ttk.Notebook(dock)
         self.control_notebook=notebook
         notebook.pack(fill="both", expand=True)
+        layers = tk.Frame(notebook,bg=PANEL,padx=12,pady=10)
+        notebook.add(layers,text="图层")
+        self.layers_page = layers
         panels = []
-        for title in ("图层颜色", "工具"):
+        for title in ("调色", "操作"):
             frame = tk.Frame(notebook, bg=PANEL)
             notebook.add(frame, text=title)
             panels.append(self._scroll_panel(frame))
         props, automate = panels
+        self.palette_page = notebook.tabs()[1]
         self.manual_tab=notebook.tabs()[0]
-        self._section(props, "调色板", "PALETTE")
+        self._section(props, "调色板")
         self.palette_frame = tk.Frame(props, bg=PANEL)
         self.palette_frame.pack(fill="x")
         self.color_label = self.label(props, "", MUTED, ("Consolas", 8))
@@ -401,39 +501,37 @@ class DesktopUI:
         self._check(props, "仅使用调色板颜色", self.palette_constraint,
                     lambda: self.apply([{"op": "palette_lock", "enabled": self.palette_constraint.get()}], "设置颜色约束")).pack(anchor="w")
         self.button(props, "+ 添加颜色", self.add_color, font=SMALL, pady=4).pack(anchor="w")
-        self._section(props, "图层", "上层在前 / 右键更多")
-        self.layers_widget = tk.Listbox(props, bg=BG, fg=FG, selectbackground="#354b70", selectforeground=FG,
-                                       relief="flat", borderwidth=0, height=5, activestyle="none", exportselection=False,
-                                       font=SMALL, selectborderwidth=0)
-        self.layers_widget.pack(fill="x")
+        layer_head=tk.Frame(layers,bg=PANEL)
+        layer_head.pack(fill="x",pady=(0,6))
+        self.layer_count_label=self.label(layer_head,"图层",MUTED,("Microsoft YaHei UI",8))
+        self.layer_count_label.pack(side="left")
+        self.label(layer_head,"右键更多操作",MUTED,("Microsoft YaHei UI",8)).pack(side="right")
+        layer_footer=tk.Frame(layers,bg=PANEL)
+        layer_footer.pack(side="bottom",fill="x",pady=(8,0))
+        layer_list, self.layers_widget = scrollable_widget(
+            layers, tk.Listbox, horizontal=True, bg=PANEL, fg=FG, selectbackground="#2b3a52", selectforeground=FG,
+            relief="flat", borderwidth=0, highlightthickness=0, height=12, activestyle="none", exportselection=False,
+            font=SMALL, selectborderwidth=0)
+        layer_list.pack(fill="both",expand=True)
+        self.layers_scrollbar = self.layers_widget.vertical_scrollbar
         self.layers_widget.bind("<<ListboxSelect>>", self.layer_selected)
         self.layers_widget.bind("<Double-Button-1>", self.rename_layer)
         self.layers_widget.bind("<Button-3>", self.layer_menu)
-        row = tk.Frame(props, bg=PANEL)
+        row = tk.Frame(layer_footer, bg=PANEL)
         row.pack(fill="x", pady=6)
         for text, cb in [("+", self.add_layer), ("显隐", self.toggle_layer), ("锁定", self.lock_layer),
                          ("↑", lambda: self.reorder_layer(1)), ("↓", lambda: self.reorder_layer(-1))]:
-            self.button(row, text, cb, padx=7, pady=3, font=SMALL).pack(side="left", padx=(0, 3))
-        row = tk.Frame(props, bg=PANEL)
+            self.button(row, text, cb, padx=9, pady=4, font=SMALL).pack(side="left", padx=(0, 4))
+        row = tk.Frame(layer_footer, bg=PANEL)
         row.pack(fill="x", pady=3)
         self.label(row, "不透明度", MUTED, SMALL).pack(side="left")
         self._entry(row, self.opacity_var, 4).pack(side="left", padx=8)
         self.button(row, "应用", self.apply_opacity, pady=2, font=SMALL).pack(side="left")
-        self._section(props, "当前帧", "TIMING")
-        row = tk.Frame(props, bg=PANEL)
-        row.pack(fill="x")
-        self._entry(row, self.duration_var, 6).pack(side="left")
-        self.label(row, " ms", MUTED, SMALL).pack(side="left")
-        self.button(row, "应用时长", self.apply_duration, pady=3, font=SMALL).pack(side="right")
-        self.timing_hint = self.label(props, "", MUTED, SMALL)
-        self.timing_hint.pack(anchor="w", pady=7)
-
-        self._section(automate, "原生自动化", "预览 → 应用 → 可撤销")
+        self._section(automate, "批量操作", "可预览 · 可撤销")
         self.quality_label=self.label(automate,"自检：待检查与 AI 看图复核",ACCENT,SMALL,wraplength=270,justify="left")
         self.quality_label.pack(anchor="w",pady=(0,5))
-        self.button(automate,"成品自检 · 观看并复查",self.quality_dialog,font=SMALL).pack(fill="x",pady=(0,8))
+        self.button(automate,"检查成品",self.quality_dialog,font=SMALL).pack(fill="x",pady=(0,8))
         self.button(automate, "图片 → 像素底稿", self.reference_dialog, True, font=SMALL).pack(fill="x", pady=(0, 10))
-        self.label(automate, "将重复操作变成可调参数的流程。\n应用前查看结果，一次撤销恢复。", MUTED, SMALL, justify="left").pack(anchor="w", pady=(0, 8))
         for kind, title, hint in [("float", "起伏循环", "复制当前帧，让当前图层周期移动"),
                                   ("travel", "往返位移", "设置终点偏移，自动生成往返动作"),
                                   ("duration", "批量帧时长", "统一指定范围的动画节奏"),
@@ -448,22 +546,22 @@ class DesktopUI:
         center = tk.Frame(self.editor_panes, bg=PANEL)
         self.center_panel=center
         self.editor_panes.add(center, minsize=220, stretch="always")
-        tabs = tk.Frame(center, bg=PANEL, padx=12, pady=4)
+        tabs = tk.Frame(center, bg=PANEL, padx=12, pady=6)
+        self.canvas_header=tabs
         tabs.pack(fill="x")
-        self.project_label = self.label(tabs, "", font=("Microsoft YaHei UI", 10, "bold"))
-        self.project_label.pack(side="left")
+        self.project_label = self.label(tabs, "", font=("Microsoft YaHei UI", 9, "bold"),width=1,anchor="w")
+        self.project_label.pack(side="left",fill="x",expand=True)
         self.tab_label = self.label(tabs, "", MUTED, SMALL)
-        self.tab_label.pack(side="right")
-        settings = tk.Frame(center, bg=FIELD, padx=8, pady=5)
+        self.tab_label.pack(side="left",padx=(8,14))
+        settings = tk.Frame(center, bg=PANEL, padx=12, pady=7)
         self.canvas_settings=settings
         settings.pack(fill="x")
         from .feedback_ui import FeedbackPanel
         self.feedback_toolbar=tk.Frame(center,bg=PANEL,padx=12,pady=8)
         self.feedback_panel=FeedbackPanel(self,self.feedback_toolbar)
-        edit_controls=tk.Frame(settings,bg=FIELD)
+        edit_controls=tk.Frame(settings,bg=PANEL)
         self.edit_controls=edit_controls
         edit_controls.pack(side="left")
-        self.canvas_mode_label=self.label(settings,"成品预览",MUTED,SMALL)
         self.undo_button = self.button(edit_controls, "↶", self.undo, padx=8, pady=2)
         self.undo_button.pack(side="left")
         self.redo_button = self.button(edit_controls, "↷", self.redo, padx=8, pady=2)
@@ -476,12 +574,12 @@ class DesktopUI:
                    buttonbackground=FIELD, relief="flat", insertbackground=FG).pack(side="left")
         self._check(edit_controls, "实心", self.filled).pack(side="left", padx=5)
         self._option(edit_controls, self.symmetry_var, ["关闭对称", "左右对称", "上下对称", "四向对称"], lambda _: self.render()).pack(side="left")
-        self.button(settings, "适应 F", self.fit, pady=3, padx=7, font=SMALL).pack(side="right")
-        self.button(settings, "−", lambda: self.change_zoom(-1), pady=3, padx=7).pack(side="right", padx=2)
-        self.zoom_label = self.label(settings, "100%", MUTED, ("Consolas", 9))
+        self.button(tabs, "适应", self.fit, pady=3, padx=7, font=SMALL,bg=PANEL).pack(side="right")
+        self.button(tabs, "−", lambda: self.change_zoom(-1), pady=3, padx=7,bg=PANEL).pack(side="right", padx=2)
+        self.zoom_label = self.label(tabs, "100%", MUTED, ("Consolas", 9))
         self.zoom_label.pack(side="right", padx=4)
-        self.button(settings, "+", lambda: self.change_zoom(1), pady=3, padx=7).pack(side="right", padx=2)
-        view_button = tk.Menubutton(settings, text="视图 ▾", bg=FIELD, fg=FG, activebackground=EDGE,
+        self.button(tabs, "+", lambda: self.change_zoom(1), pady=3, padx=7,bg=PANEL).pack(side="right", padx=2)
+        view_button = tk.Menubutton(tabs, text="视图 ▾", bg=PANEL, fg=MUTED, activebackground=EDGE,
                                     activeforeground=FG, relief="flat", font=SMALL, padx=7, pady=3)
         view_menu = tk.Menu(view_button, tearoff=False, bg=FIELD, fg=FG)
         for text, var in [("像素网格", self.show_grid), ("洋葱皮", self.onion), ("部位标记", self.show_regions), ("参考叠加", self.show_reference)]:
@@ -490,7 +588,7 @@ class DesktopUI:
         view_menu.add_command(label="调整画布…", command=self.resize_dialog)
         view_button.config(menu=view_menu)
         view_button.pack(side="right", padx=(0, 5))
-        self.canvas = tk.Canvas(center, bg="#0d1017", highlightthickness=0, cursor="crosshair")
+        self.canvas = tk.Canvas(center, bg="#0b0f16", highlightthickness=0, cursor="crosshair")
         self.canvas.pack(fill="both", expand=True)
         for event, handler in [("<Configure>", lambda e: self.render()), ("<Button-1>", self.pointer_down),
                                ("<B1-Motion>", self.pointer_drag), ("<ButtonRelease-1>", self.pointer_up),
@@ -506,6 +604,15 @@ class DesktopUI:
 
     def symmetry_mode(self):
         return {"左右对称": "x", "上下对称": "y", "四向对称": "xy"}.get(self.symmetry_var.get(), "off")
+
+    def frame_view_resized(self, event=None):
+        pending = getattr(self, "frame_reveal_job", None)
+        if pending:
+            self.root.after_cancel(pending)
+        def reveal():
+            self.frame_reveal_job = None
+            self.refresh_playhead(self.play_frame if self.playing else self.doc.active_frame, reveal=True)
+        self.frame_reveal_job = self.root.after_idle(reveal)
 
     def bind_project_scroll(self,widget):
         # Tk child buttons do not bubble wheel events to their containing Canvas.
@@ -541,7 +648,16 @@ class DesktopUI:
         width=max(1,self.project_tabs.winfo_reqwidth())
         height=max(30,self.project_tabs.winfo_reqheight())
         self.project_tabs_canvas.config(scrollregion=(0,0,width,height),height=height)
-        overflow=width>self.project_tabs_canvas.winfo_width()+2
+        arrow_width=sum(w.winfo_width() for w in (self.project_scroll_left,self.project_scroll_right) if w.winfo_manager())
+        capacity=self.project_tabs_canvas.winfo_width()+arrow_width
+        overflow=width>capacity+2
+        if overflow:
+            if not self.project_scroll_left.winfo_manager():
+                self.project_scroll_left.pack(side='left',before=self.project_tabs_view,padx=(0,4))
+                self.project_scroll_right.pack(side='right',before=self.project_tabs_view,padx=(4,0))
+        else:
+            self.project_scroll_left.pack_forget()
+            self.project_scroll_right.pack_forget()
         if overflow and not self.project_scrollbar.winfo_manager():
             self.project_scrollbar.pack(fill='x')
         elif not overflow and self.project_scrollbar.winfo_manager():
@@ -585,7 +701,8 @@ class DesktopUI:
             self.project_menu.add_command(label=title,command=lambda key=entry['id']:self.project_action('switch',project_id=key),
                                           state='normal' if entry['available'] else 'disabled')
             button=self.button(self.project_tabs,title[:25],lambda key=entry['id']:self.project_action('switch',project_id=key),
-                               entry['active'],pady=5,font=SMALL)
+                               pady=5,font=SMALL,bg=FIELD if entry['active'] else BG,
+                               fg=ACCENT if entry['active'] else MUTED,activebackground=FIELD)
             button.pack(side='left',padx=(0,5))
             self.project_tab_buttons[entry['id']]=button
             self.bind_project_scroll(button)
@@ -1064,8 +1181,9 @@ class DesktopUI:
         query = tk.StringVar()
         entry = self._entry(dialog, query)
         entry.pack(fill="x", padx=18, ipady=7)
-        listing = tk.Listbox(dialog, bg=BG, fg=FG, selectbackground="#354b70", relief="flat", activestyle="none", font=FONT)
-        listing.pack(fill="both", expand=True, padx=18, pady=12)
+        list_frame, listing = scrollable_widget(dialog, tk.Listbox, bg=BG, fg=FG,
+            selectbackground="#354b70", relief="flat", activestyle="none", font=FONT)
+        list_frame.pack(fill="both", expand=True, padx=18, pady=12)
         commands = [(f"{name}   [{key}]", lambda t=tool: self.choose_tool(t)) for tool, (name, key, _) in TOOL_INFO.items()]
         commands += [("适应画布  [F]", self.fit), ("另存为  [Ctrl Shift S]", self.save_as), ("新建工程", self.new_dialog),
                      ("检查更新 · 新版本与下载", self.show_updates),

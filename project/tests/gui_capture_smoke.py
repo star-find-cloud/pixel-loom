@@ -32,7 +32,7 @@ def main():
             self_history=len(editor.doc.undo_stack)
             assert not hasattr(panel,'description') and not hasattr(panel,'submit_button')
             assert not hasattr(panel,'brief')
-            assert [editor.control_notebook.tab(tab,'text') for tab in editor.control_notebook.tabs()]==['图层颜色','工具']
+            assert [editor.control_notebook.tab(tab,'text') for tab in editor.control_notebook.tabs()]==['图层','调色','操作']
             assert editor.workspace_mode=='preview'
             assert not editor.editor_dock.winfo_manager() and not editor.tool_rail.winfo_manager()
             assert not editor.feedback_toolbar.winfo_manager()

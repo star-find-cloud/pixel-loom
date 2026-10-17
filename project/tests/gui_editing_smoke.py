@@ -137,6 +137,63 @@ def main():
             assert len(editor.editor_panes.panes()) == 2
             assert len(editor.main_panes.panes()) == 2
 
+            # Nested layer scrolling must reach all 64 layers without scrolling the dock.
+            # Map native widgets so visibility/scrollbar and Listbox.see are exercised.
+            if editor.welcome_job:
+                root.after_cancel(editor.welcome_job)
+                editor.welcome_job = None
+            editor.updates.preferences["check_on_startup"] = False
+            root.deiconify()
+            fresh()
+            base_layer = editor.doc.active_layer
+            editor.apply([{"op": "layer_add", "id": f"layer-{i}", "name": f"Layer {i:02d}"}
+                          for i in range(63)] + [{"op": "select", "layer": base_layer}], "many layers")
+            root.update()
+            listing = editor.layers_widget
+            assert editor.layers_scrollbar.winfo_ismapped()
+            assert listing.size() == 64 and listing.bbox(63) is not None
+            dock_canvas = editor.palette_frame.master.master
+            outer_view, zoom, revision = dock_canvas.yview(), editor.zoom, editor.doc.revision
+            listing.yview_moveto(0)
+            listing.event_generate("<MouseWheel>", delta=-120)
+            root.update()
+            assert listing.yview()[0] > 0
+            assert dock_canvas.yview() == outer_view and editor.zoom == zoom
+            assert editor.doc.revision == revision
+            command = root.tk.splitlist(editor.layers_scrollbar.cget("command"))
+            root.tk.call(*command, "moveto", 1)
+            root.update_idletasks()
+            assert listing.bbox(63) is not None and listing.yview()[1] == 1
+            editor.apply([{"op": "select", "layer": "layer-62"}], "select top layer")
+            root.update_idletasks()
+            assert listing.bbox(0) is not None
+            listing.yview_moveto(.5)
+            top_layer = editor.layer_ids[listing.nearest(0)]
+            editor.apply([{"op": "pixel", "x": 0, "y": 0, "color": 7}], "paint while browsing")
+            root.update_idletasks()
+            assert editor.layer_ids[listing.nearest(0)] == top_layer
+            editor.reorder_layer(-1)
+            root.update_idletasks()
+            assert editor.layer_ids[listing.nearest(0)] == top_layer
+            editor.apply([{"op": "select", "layer": base_layer}], "select bottom layer")
+            root.update_idletasks()
+            assert listing.bbox(63) is not None
+            listing.selection_clear(0, "end")
+            listing.selection_set(62)
+            listing.event_generate("<<ListboxSelect>>")
+            root.update()
+            assert editor.doc.active_layer == editor.layer_ids[62] and listing.bbox(62) is not None
+            # Repeated mappings must not add the outer dock's wheel binding to this list.
+            editor.set_workspace_mode("preview")
+            editor.set_workspace_mode("manual")
+            root.update()
+            listing.yview_moveto(.5)
+            before = listing.nearest(0)
+            listing.event_generate("<MouseWheel>", delta=120)
+            root.update()
+            assert listing.nearest(0) == before - 3
+            root.withdraw()
+
             fresh()
             export = editor.export_dialog()
             root.update()
@@ -169,6 +226,8 @@ def main():
                 "only changed thumbnail refreshed", "transparent eraser with opaque-only palette",
                 "256-color PNG paste fidelity", "cancel/discard conversion semantics", "pause/resume/stop",
                 "512px canvas fit and fractional zoom", "resizable panes and persisted layout",
+                "64 layers reachable by scrollbar and nested wheel", "active layer revealed",
+                "layer browsing preserved across painting/reordering", "layer selection and remapped scrolling",
                 "stale export snapshot refresh", "invalid export disabled", "fresh snapshot export pixels",
                 "no Tk callback errors"]}))
         finally:

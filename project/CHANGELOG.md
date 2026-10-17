@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.15 — 2026-10-17: focused layout and reliable scrolling
+
+- Reorganize the desktop around a compact header, canvas and timeline. Give layers an expanding independent list, move colors and batch tools into separate tabs, and place frame duration controls beside playback. Preserve preview/feedback focus, all native features, scroll support, shortcuts and undo.
+- Unify dark surfaces, spacing, compact tool icons, flat tabs, subdued scrollbars and optional Windows dark title bars; remember the selected drawing panel when returning from preview.
+- Add an independent layer-list scrollbar and mouse-wheel scrolling. Keep the browsing position during edits and reordering, and reveal a newly selected layer without scrolling the surrounding dock or changing canvas zoom.
+- Fix wheel routing over rebuilt palette swatches and nested quality controls. Add overflow scrollbars for long layer names, saved versions, fixed-part lists, command search, storage details and workflow progress.
+- Preserve timeline/project-list/progress reading positions across unrelated refreshes; reveal selected frames using real widget geometry, including after window resizing. Avoid rewriting unchanged progress text and losing its selection.
+- Add isolated native regression coverage for large palettes, long timelines, long names, older versions and nested scrolling.
+
 ## 0.7.14 — 2026-10-17: task workflows and efficient MCP reads
 
 - Add project-strip arrows, an overflow scrollbar and a complete-list button. Wheel scrolling works over child tabs; switching projects or resizing reveals the active tab rather than clipping later projects.

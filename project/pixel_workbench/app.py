@@ -13,7 +13,7 @@ from .service import DocumentService
 from .model import Document, PixelError, hexcolor, integer, rgba, pixels, atomic_json
 
 
-from .ui import DesktopUI, TOOL_INFO, place_dialog, BG, PANEL, FIELD, EDGE, FG, MUTED, ACCENT, GREEN, FONT, SMALL
+from .ui import DesktopUI, TOOL_INFO, place_dialog, bind_scroll_wheel, dark_titlebar, BG, PANEL, FIELD, EDGE, FG, MUTED, ACCENT, GREEN, FONT, SMALL
 from .workflows import symmetric_ops
 from .messages import user_error
 
@@ -99,6 +99,7 @@ class Editor(DesktopUI):
         self.pump_job=root.after(40, self.pump)
         root.protocol("WM_DELETE_WINDOW", self.close)
         self._shortcuts()
+        root.after_idle(lambda: dark_titlebar(root))
         self.welcome_job = root.after(300, self.show_startup_guide)
         from .update_ui import UpdateController
         self.updates = UpdateController(self)
@@ -185,8 +186,8 @@ class Editor(DesktopUI):
         self.selection_preview = None
         self.override = None
         for name, button in self.tool_buttons.items():
-            button.config(bg="#354b70" if name == tool else FIELD, fg=FG,
-                          highlightthickness=1, highlightbackground=ACCENT if name == tool else FIELD)
+            button.config(bg="#293a53" if name == tool else PANEL, fg=FG,
+                          highlightthickness=0)
         if hasattr(self, "tool_name_label"):
             name, key, hint = TOOL_INFO[tool]
             self.tool_name_label.config(text=name)
@@ -195,6 +196,8 @@ class Editor(DesktopUI):
     def set_workspace_mode(self, mode, choose_default=True):
         if mode not in ("preview","feedback","manual"):
             return
+        if self.workspace_mode=="manual" and mode!="manual":
+            self._last_manual_tab=self.control_notebook.select()
         playing_frame=self.play_frame if self.playing else None
         self.stop_play()
         if playing_frame is not None and playing_frame!=self.doc.active_frame:
@@ -204,43 +207,40 @@ class Editor(DesktopUI):
         self.selection_preview=None
         self.workspace_mode=mode
         for name,button in self.mode_buttons.items():
-            button.config(bg=ACCENT if name==mode else FIELD,fg=BG if name==mode else FG)
+            button.config(bg=FIELD if name==mode else BG,fg=ACCENT if name==mode else MUTED)
         for button in self.tool_buttons.values():
             button.grid_remove()
         if mode=="preview":
             self.tool_rail.pack_forget()
-            self.workflow_hint.config(text="播放或逐帧查看；有问题就截图发给 AI。",fg=MUTED)
         else:
             self.tool_rail.pack(side="left",fill="y",before=self.editor_panes,padx=(0,6))
             tools=(["feedback_lasso","feedback_rect","feedback_ellipse"] if mode=="feedback" else
                    ["pen","eraser","fill","picker","select","move"])
             for row,name in enumerate(tools):
                 self.tool_buttons[name].grid(row=row,column=0,padx=1,pady=2)
-            self.rail_title.config(text="标记位置" if mode=="feedback" else "绘画工具")
-            self.workflow_hint.config(text="可选标记 → 截图并复制 → 粘贴到 AI 对话框。" if mode=="feedback" else
-                                      "直接绘画，可撤销；修改完即可保存或导出。",fg=MUTED)
+            self.rail_title.config(text="标记" if mode=="feedback" else "工具")
             if choose_default and ((mode=="feedback")!=self.tool.startswith("feedback_")):
                 self.choose_tool("feedback_lasso" if mode=="feedback" else "pen")
         if mode=="manual":
             if not self.editor_dock.winfo_manager():
                 width = self.layout_size("dock_width", 310, 260, 520)
                 self.editor_panes.add(self.editor_dock, minsize=260, width=width, stretch="never")
-            self.canvas_mode_label.pack_forget()
+            if not self.canvas_settings.winfo_manager():
+                self.canvas_settings.pack(fill="x",before=self.canvas)
             self.edit_controls.pack(side="left")
             self.tool_more.pack(fill="x",pady=6)
-            self.control_notebook.select(self.manual_tab)
+            self.control_notebook.select(getattr(self,"_last_manual_tab",self.manual_tab))
         else:
             if self.editor_dock.winfo_manager():
                 self.layout_preferences["dock_width"] = self.editor_dock.winfo_width()
                 self.editor_panes.forget(self.editor_dock)
             self.edit_controls.pack_forget()
-            self.canvas_mode_label.config(text="选择套圈、框选或椭圆；标注不改原图。" if mode=="feedback" else "成品预览 · 左右方向键逐帧查看")
-            self.canvas_mode_label.pack(side="left",padx=6)
+            self.canvas_settings.pack_forget()
             self.tool_more.pack_forget()
         self.feedback_panel.show_mode(mode)
         self.canvas.config(cursor="arrow" if mode=="preview" else "crosshair")
         if mode=="preview":
-            self.tool_hint.config(text="Space 播放 / 暂停  ·  ← → 逐帧查看  ·  A 套圈反馈  ·  F 适应画布")
+            self.tool_hint.config(text="Space 播放 / 暂停    ← → 逐帧    A 截图反馈    F 适应画布")
         self.render()
 
     def layout_size(self, key, default, minimum, maximum):
@@ -310,7 +310,7 @@ class Editor(DesktopUI):
         self.duration_var.set(self.doc.durations[self.doc.active_frame])
         self.opacity_var.set(self.doc.layer().opacity)
         duration = self.doc.durations[self.doc.active_frame]
-        self.timing_hint.config(text=f"当前节奏 ≈ {1000/duration:.1f} FPS · 全片 {sum(self.doc.durations)/1000:.2f} 秒")
+        self.timing_hint.config(text=f"{sum(self.doc.durations)/1000:.2f}s · {1000/duration:.1f} FPS")
         self.root.title(f"{self.doc.name}{star} — Pixel Loom · 像素织机")
         self.undo_button.config(state="normal" if self.doc.undo_stack else "disabled")
         self.redo_button.config(state="normal" if self.doc.redo_stack else "disabled")
@@ -334,11 +334,11 @@ class Editor(DesktopUI):
         self.duration_var.set(self.doc.durations[self.doc.active_frame])
         self.opacity_var.set(self.doc.layer().opacity)
         duration = self.doc.durations[self.doc.active_frame]
-        self.timing_hint.config(text=f"当前节奏 ≈ {1000/duration:.1f} FPS · 全片 {sum(self.doc.durations)/1000:.2f} 秒")
+        self.timing_hint.config(text=f"{sum(self.doc.durations)/1000:.2f}s · {1000/duration:.1f} FPS")
         self.render()
         self.refresh_layers()
         self.refresh_playhead(self.doc.active_frame)
-        self.frame_info.config(text=f"{self.doc.active_frame+1:02d} / {len(self.doc.durations):02d} 帧  ·  r{self.doc.revision}")
+        self.frame_info.config(text=f"{self.doc.active_frame+1:02d} / {len(self.doc.durations):02d} 帧")
         self.undo_button.config(state="normal" if self.doc.undo_stack else "disabled")
         self.redo_button.config(state="normal" if self.doc.redo_stack else "disabled")
 
@@ -356,7 +356,7 @@ class Editor(DesktopUI):
                                    font=("Segoe UI", 8), highlightthickness=2, activebackground=color[:7], cursor="hand2",
                                    command=lambda index=i: self.select_color(index))
                 button.grid(row=i // 8, column=i % 8, padx=1, pady=1, sticky="nsew")
-                button.bind("<MouseWheel>", lambda e: "break")
+                self.bind_panel_scroll(button)
                 self.palette_buttons.append(button)
             for i in range(8):
                 self.palette_frame.columnconfigure(i, weight=1)
@@ -376,6 +376,12 @@ class Editor(DesktopUI):
             self.select_color(self.doc.palette.index(hexcolor(rgba(color))))
 
     def refresh_layers(self):
+        self.layer_count_label.config(text=f"{len(self.doc.layers)} 个图层")
+        previous_ids = self.layer_ids
+        top_id = previous_ids[self.layers_widget.nearest(0)] if previous_ids else None
+        horizontal = self.layers_widget.xview()[0]
+        reveal_active = (getattr(self, "_layers_document_id", None) != self.doc.id or
+                         getattr(self, "_layers_active_id", None) != self.doc.active_layer)
         self.layers_widget.delete(0, "end")
         self.layer_ids = []
         for layer in reversed(self.doc.layers):
@@ -383,6 +389,14 @@ class Editor(DesktopUI):
             self.layers_widget.insert("end", f"{'●' if layer.visible else '○'}  {'▣' if layer.locked else '  '}  {layer.name}")
             if layer.id == self.doc.active_layer:
                 self.layers_widget.selection_set(len(self.layer_ids) - 1)
+                self.layers_widget.activate(len(self.layer_ids) - 1)
+        if top_id in self.layer_ids:
+            self.layers_widget.yview(self.layer_ids.index(top_id))
+        self.layers_widget.xview_moveto(horizontal)
+        if reveal_active:
+            self.layers_widget.see(self.layer_ids.index(self.doc.active_layer))
+        self._layers_document_id = self.doc.id
+        self._layers_active_id = self.doc.active_layer
 
     def layer_selected(self, event=None):
         selected = self.layers_widget.curselection()
@@ -572,7 +586,7 @@ class Editor(DesktopUI):
         dialog.transient(self.root)
         text = tk.Text(dialog, bg=PANEL, fg=FG, wrap="word", relief="flat", padx=20, pady=18)
         text.pack(fill="both", expand=True)
-        text.insert("end", "可视化工作台\n右侧“工具”提供起伏、往返、批量时长、范围复制和描边；可先播放预览再应用。\nCtrl+K 搜索命令；F 适应画布；对称开关提供左右、上下和四向绘画。\n\n手动绘画\nB 铅笔 / E 橡皮 / G 填充 / S 选区 / M 移动\nP 多边形：逐点单击，Enter 或右键完成\nQ 曲线：放置 3 或 4 个控制点，Enter 完成\nCtrl+C/X/V 复制、剪切、粘贴选区；Esc 取消。\n\n动画\n复制帧后修改局部；动作分组可定义待机、走路、攻击和循环方向。\n右键图层列表可复制、向下合并和调整不透明度。\n\nAI / MCP\n连接后先调用 pixel_onboard。工具自带参数结构，pixel_help 提供示例。\n用 pixel_validate 预看修改，用 pixel_contact_sheet 对照多帧。\n\n文件\n工程为 .pixloom；透明 PNG / 精灵表+JSON / GIF 可以导出。\n" +
+        text.insert("end", "可视化工作台\n右侧分为“图层”“调色”“操作”；图层独立滚动，颜色单独查看。“操作”提供起伏、往返、批量时长、范围复制和描边，可先预览再应用。\nCtrl+K 搜索命令；F 适应画布；对称开关提供左右、上下和四向绘画。\n\n手动绘画\nB 铅笔 / E 橡皮 / G 填充 / S 选区 / M 移动\nP 多边形：逐点单击，Enter 或右键完成\nQ 曲线：放置 3 或 4 个控制点，Enter 完成\nCtrl+C/X/V 复制、剪切、粘贴选区；Esc 取消。\n\n动画\n复制帧后修改局部；动作分组可定义待机、走路、攻击和循环方向。\n右键图层列表可复制、向下合并和调整不透明度。\n\nAI / MCP\n连接后先调用 pixel_onboard。工具自带参数结构，pixel_help 提供示例。\n用 pixel_validate 预看修改，用 pixel_contact_sheet 对照多帧。\n\n文件\n工程为 .pixloom；透明 PNG / 精灵表+JSON / GIF 可以导出。\n" +
                     f"\n默认工作间：{ROOT}\n恢复目录：{RUNTIME / 'recovery'}\n\n可用下方按钮选择恢复副本；打开前会提示保存当前修改。")
         text.config(state="disabled")
         row = tk.Frame(dialog, bg=PANEL, padx=14, pady=10)
@@ -609,7 +623,7 @@ class Editor(DesktopUI):
                                    command=lambda f=i: self.select_frame(f))
                 button.pack(side="left", padx=(0, 5))
                 button.bind("<Button-3>", lambda event, frame=i: self.frame_menu(event, frame))
-                button.bind("<MouseWheel>", lambda e: self.frame_canvas.xview_scroll(-1 if e.delta > 0 else 1, "units"))
+                bind_scroll_wheel(button, self.frame_canvas.xview_scroll, units=83)
                 self.frame_buttons.append(button)
         for i, duration in enumerate(self.doc.durations):
             if i in invalid or self.thumb_images[i] is None:
@@ -624,20 +638,26 @@ class Editor(DesktopUI):
         self.frames_widget.update_idletasks()
         self.frame_canvas.config(scrollregion=self.frame_canvas.bbox("all"))
         self.refresh_playhead(self.doc.active_frame)
-        self.frame_info.config(text=f"{self.doc.active_frame+1:02d} / {count:02d} 帧  ·  r{self.doc.revision}")
+        self.frame_info.config(text=f"{self.doc.active_frame+1:02d} / {count:02d} 帧")
 
-    def refresh_playhead(self, frame):
+    def refresh_playhead(self, frame, reveal=False):
         for i, button in enumerate(self.frame_buttons):
             button.config(bg="#354b70" if i == frame else FIELD,
                           highlightbackground=ACCENT if i == frame else FIELD)
+        identity = self.doc.id, frame
+        if not reveal and getattr(self, "_timeline_revealed", None) == identity:
+            return
+        self._timeline_revealed = identity
         total = max(1, self.frames_widget.winfo_reqwidth())
         left, right = self.frame_canvas.xview()
-        start, end = frame*83, frame*83+81
+        button = self.frame_buttons[frame]
+        start = button.winfo_x()
+        end = start + button.winfo_width()
         visible = max(1, self.frame_canvas.winfo_width())
         if start < left*total:
             self.frame_canvas.xview_moveto(start/total)
         elif end > right*total:
-            self.frame_canvas.xview_moveto(max(0, end-visible)/total)
+            self.frame_canvas.xview_moveto(max(0, end+5-visible)/total)
 
     def refresh_events(self):
         if not hasattr(self,"events_widget") or not self.events_widget.winfo_exists():
@@ -756,11 +776,11 @@ class Editor(DesktopUI):
                                              ox + (x + 1) * self.zoom, oy + (y + 1) * self.zoom, outline=ACCENT)
         preview_scale = max(1, min(2, 72 // max(doc.width, doc.height)))
         preview = doc.preview(current_frame, scale=preview_scale)
-        if preview.width > 200 or preview.height > 80:
-            preview.thumbnail((200, 80), Image.Resampling.NEAREST)
+        if preview.width > 200 or preview.height > 64:
+            preview.thumbnail((200, 64), Image.Resampling.NEAREST)
         self.small_photo = ImageTk.PhotoImage(preview)
         self.preview_widget.config(image=self.small_photo)
-        self.preview_info.config(text=f"{doc.width} × {doc.height} px   ·   {len(doc.palette)} 色   ·   整数像素")
+        self.preview_info.config(text=f"{doc.width} × {doc.height}  ·  {len(doc.palette)} 色")
         self.zoom_label.config(text=f"{self.zoom * 100:.0f}%")
         self.coordinates_label.config(text=f"{self.zoom * 100:.0f}%  ·  帧 {current_frame + 1}  ·  r{doc.revision}")
         from .feedback_ui import draw_annotations
@@ -1233,7 +1253,7 @@ class Editor(DesktopUI):
         if self.updates is not None:
             self.updates.close()
         self.stop_play()
-        for name in ('fit_job','pump_job','autosave_job','welcome_job','project_reveal_job'):
+        for name in ('fit_job','pump_job','autosave_job','welcome_job','project_reveal_job','frame_reveal_job'):
             job=getattr(self,name,None)
             if job:
                 try:self.root.after_cancel(job)

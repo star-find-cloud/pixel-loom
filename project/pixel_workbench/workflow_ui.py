@@ -5,6 +5,7 @@ from tkinter import ttk
 from .creation_guidance import TOPICS, workflow_help
 from .model import PixelError
 from .workflow import ROUTES
+from .ui import scrollable_widget
 
 
 def show(editor):
@@ -16,8 +17,8 @@ def show(editor):
     window.title('AI 工作流与进度')
     window.geometry('850x650')
     window.transient(editor.root)
-    summary=tk.Text(window,height=10,wrap='word',padx=12,pady=10)
-    summary.pack(fill='x')
+    summary_frame,summary=scrollable_widget(window,tk.Text,height=10,wrap='word',padx=12,pady=10)
+    summary_frame.pack(fill='x')
     row=ttk.Frame(window,padding=8);row.pack(fill='x')
     ttk.Label(row,text='按需查看说明：').pack(side='left')
     choices={f'{title} · {key}':key for key,(_,title) in TOPICS.items()}
@@ -29,8 +30,11 @@ def show(editor):
     scrollbar=ttk.Scrollbar(body,command=guide.yview)
     guide.config(yscrollcommand=scrollbar.set)
     scrollbar.pack(side='right',fill='y');guide.pack(fill='both',expand=True)
-    def replace(widget,value):
+    def replace(widget,value,keep_view=False):
+        if widget.get('1.0','end-1c')==value:return
+        top=widget.index('@0,0') if keep_view else '1.0'
         widget.config(state='normal');widget.delete('1.0','end');widget.insert('end',value);widget.config(state='disabled')
+        widget.yview(top)
     def load_guide(event=None):replace(guide,workflow_help(choices[selected.get()])['guide'])
     combo.bind('<<ComboboxSelected>>',load_guide);load_guide()
     window.workflow_summary=summary
@@ -44,8 +48,8 @@ def show(editor):
                 lines+=[f"{ROUTES[context['task']]['title']} · {context['stage']} · 记录 {data['task_revision']}",context['brief'],f"下一步：{context['next_action'] or '由 AI 根据任务继续'}"]
                 for part in context['parts']:
                     lines.append(f"{part.get('name',part['layer'])}：{part['extraction']} / 遮挡处 {part['hidden']}"+('（需重新检查）' if not part['current'] else ''))
-            replace(summary,'\n'.join(lines))
-        except PixelError as exc:replace(summary,f'工作记录暂时无法读取：{exc}\n原工程仍可照常打开、编辑和保存。')
+            replace(summary,'\n'.join(lines),keep_view=True)
+        except PixelError as exc:replace(summary,f'工作记录暂时无法读取：{exc}\n原工程仍可照常打开、编辑和保存。',keep_view=True)
         window._workflow_job=window.after(1200,refresh)
     def destroyed(event):
         if event.widget is window:

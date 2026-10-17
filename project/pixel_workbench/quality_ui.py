@@ -8,7 +8,7 @@ from PIL import Image, ImageTk
 
 from .model import PixelError
 from .quality import validate_policy
-from .ui import BG, PANEL, FIELD, FG, MUTED, ACCENT, GREEN, SMALL, place_dialog
+from .ui import BG, PANEL, FIELD, FG, MUTED, ACCENT, GREEN, SMALL, place_dialog, scrollable_widget
 
 LABELS = {"pending":"待 AI 看图复核","stale":"作品已修改 · 待复查","passed":"AI 自检通过",
           "needs_changes":"需要修改后复查","uncertain":"尚未确认合格"}
@@ -63,9 +63,10 @@ class QualityDialog:
             editor._check(controls,text,var).pack(anchor="w",pady=3)
         editor.label(controls,"固定部位（多选）",MUTED,SMALL).pack(anchor="w",pady=(9,4))
         self.region_names=list(editor.doc.regions)
-        self.regions=tk.Listbox(controls,selectmode="multiple",exportselection=False,height=4,bg=BG,fg=FG,
-                                selectbackground="#354b70",relief="flat",font=SMALL)
-        self.regions.pack(fill="x")
+        region_frame,self.regions=scrollable_widget(controls,tk.Listbox,horizontal=True,
+            selectmode="multiple",exportselection=False,height=4,bg=BG,fg=FG,
+            selectbackground="#354b70",relief="flat",font=SMALL)
+        region_frame.pack(fill="x")
         for i,name in enumerate(self.region_names):
             self.regions.insert("end",name)
             if name in policy["fixed_regions"]:
@@ -74,8 +75,9 @@ class QualityDialog:
         self.detail_regions=tk.StringVar(value=",".join(policy["detail_regions"]))
         editor._entry(controls,self.detail_regions).pack(fill="x",ipady=4)
         editor.label(controls,"额外视觉要求（每行一项）",MUTED,SMALL).pack(anchor="w",pady=(9,4))
-        self.criteria=tk.Text(controls,height=3,bg=BG,fg=FG,insertbackground=FG,relief="flat",wrap="word",font=SMALL)
-        self.criteria.pack(fill="x")
+        criteria_frame,self.criteria=scrollable_widget(controls,tk.Text,height=3,bg=BG,fg=FG,
+            insertbackground=FG,relief="flat",wrap="word",font=SMALL)
+        criteria_frame.pack(fill="x")
         self.criteria.insert("1.0","\n".join(policy["criteria"]))
         editor.button(controls,"保存要求并检查",self.save_settings,True,font=SMALL).pack(fill="x",pady=12)
         editor.label(controls,"程序检查通过后，AI 仍需看图复核。\n发现问题会修改并重新检查。\n作品修改后，旧结论自动失效。",MUTED,SMALL,

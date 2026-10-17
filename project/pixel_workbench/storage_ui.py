@@ -7,7 +7,7 @@ import threading
 import tkinter as tk
 from tkinter import messagebox
 
-from .ui import BG, PANEL, FIELD, FG, MUTED, SMALL, place_dialog
+from .ui import BG, PANEL, FIELD, FG, MUTED, SMALL, place_dialog, scrollable_widget
 
 REASONS={'Within retention age':'仍在保留期限内','Latest/retained version':'最新版本或最近保留的版本',
          'Pinned version':'已标记保留','Active review asset':'正在使用的检查预览',
@@ -64,8 +64,9 @@ class StorageDialog:
             self.age.trace_add('write',lambda *_:self.invalidate())
         else:
             editor.label(options,'仅清理刚才所选的项目 / 版本，具体内容以下方预览为准。',MUTED,SMALL).pack(anchor='w')
-        self.details=tk.Text(d,bg=BG,fg=FG,relief='flat',font=SMALL,height=14,wrap='word',padx=12,pady=12)
-        self.details.pack(fill='both',expand=True,padx=18,pady=10)
+        details_frame,self.details=scrollable_widget(d,tk.Text,bg=BG,fg=FG,relief='flat',font=SMALL,
+            height=14,wrap='word',padx=12,pady=12)
+        details_frame.pack(fill='both',expand=True,padx=18,pady=10)
         self.details.insert('end','打开此窗口不会删除任何内容。先点击“预览清理”。\n\n已删除项目的彻底清理：在“项目管理 → 已删除”中选择项目，再点击“彻底清理所选”。')
         self.details.config(state='disabled')
         footer=tk.Frame(d,bg=PANEL)

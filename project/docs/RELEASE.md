@@ -17,6 +17,8 @@ python -m tests.mcp_storage_smoke
 python -m tests.mcp_character_smoke
 python -m tests.gui_smoke
 python -m tests.gui_editing_smoke
+python -m tests.gui_overflow_smoke
+python -m tests.gui_layout_smoke
 python -m tests.gui_cutout_smoke
 python -m tests.gui_updates_smoke
 python -m tests.gui_welcome_smoke
