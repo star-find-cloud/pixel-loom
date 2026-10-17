@@ -53,13 +53,21 @@ def main():
             editor.project_scroll_left.invoke()
             root.update()
             assert canvas.xview()[0]<before
-            for width in (1320,1160,1240,1320):
+            # CI desktops can clamp 1160 and 1320 to the SAME monitor width,
+            # producing no Configure event. Exercise real viewport changes
+            # inside the measured window bounds rather than assuming its size.
+            actual_width=min(root.winfo_width(),root.maxsize()[0])
+            minimum=root.minsize()
+            root.minsize(min(minimum[0],actual_width-200),minimum[1])
+            for width in (actual_width-120,actual_width-40,actual_width-160,actual_width):
+                previous_viewport=canvas.winfo_width()
                 root.geometry(f'{width}x800+30+30')
                 # Native window-manager resize messages need a real event turn;
                 # one update() can return before those messages arrive on Windows.
                 root.after(120,root.quit)
                 root.mainloop()
                 root.update()
+                assert canvas.winfo_width()!=previous_viewport,('Viewport did not resize',width,canvas.winfo_width())
                 button=editor.project_tab_buttons[editor.project_active_id]
                 assert active_visible(),('Active project clipped after resize',width,canvas.winfo_width(),
                     canvas.xview(),button.winfo_x(),button.winfo_width())
