@@ -28,6 +28,10 @@ def configurations(executable=None, headless=False):
         executable = executable.with_name("PixelLoomMCP.exe")
     executable = str(executable)
     args = ["--mcp"] if frozen else ["-m", "pixel_workbench", "--mcp"]
+    # Hosts do not inherit this editor's command-line directory overrides.
+    # Pin the resolved directories so a copied config reaches the same document.
+    from .paths import DATA_HOME, WORKSPACE
+    args += ['--data-dir',str(DATA_HOME),'--workspace',str(WORKSPACE)]
     if headless:
         args.append("--headless")
     entry = {"command": executable, "args": args}

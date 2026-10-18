@@ -13,6 +13,8 @@ def user_error(error):
         "EDITOR_BUSY": "请先完成当前笔画或路径，再执行此操作。",
         "LAYER_LOCKED": "当前图层已锁定，请先解锁或选择其他图层。",
         "FILE_EXISTS": "目标文件已存在，请换一个文件名，或确认覆盖。",
+        'EXPORT_SIDECAR_CONFLICT':'同名 Godot 资源已存在，请换一个文件名，或选择 Godot 格式一起导出，避免旧资源引用被替换的图集。',
+        'EXPORT_RECOVERY_NEEDED':'导出中断，部分旧文件保留在备份中；请按错误详情恢复备份，暂勿覆盖同名文件。',
         "PROJECT_FILE_CHANGED": "工程文件已被其他程序修改，请另存为新文件，或重新打开后继续。",
         "REFERENCE_REQUIRED": "请先导入普通原图，再生成像素底稿。",
         "REVIEW_REQUIRED": "此范围尚未通过成品检查，请先复查，或选择直接导出当前版本。",

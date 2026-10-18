@@ -110,6 +110,11 @@ def main():
             editor.help_dialog()
             editor.connection_dialog()
             root.update()
+            connection=next(w for w in root.winfo_children() if isinstance(w,tk.Toplevel) and w.title()=='MCP · Pixel Loom')
+            def connection_widgets(parent):
+                for widget in parent.winfo_children():yield widget;yield from connection_widgets(widget)
+            connection_text=next(w for w in connection_widgets(connection) if isinstance(w,tk.Text)).get('1.0','end')
+            assert '--data-dir' in connection_text and '--workspace' in connection_text
             for child in root.winfo_children():
                 if isinstance(child, tk.Toplevel):
                     child.destroy()

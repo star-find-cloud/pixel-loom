@@ -139,14 +139,15 @@ class StorageManager:
 
         if 'cache' in settings['targets']:
             root=service.runtime/'review-cache'
-            active_assets={path_key(t['asset']) for t in service.quality.tickets.values()}
+            active_assets={path_key(a['path']) for t in service.quality.tickets.values()
+                           for a in t.get('assets',[{'path':t['asset']}])}
             if root.exists():
                 for folder in sorted(root.iterdir()):
                     if not re.fullmatch('[0-9a-f]{32}',folder.name):continue
                     try:
                         checked_path(folder,root)
                         for path in folder.iterdir():
-                            if path.name not in ('playback.gif','playback.png'):continue
+                            if not re.fullmatch(r'playback(?:-\d{1,3})?\.(?:gif|png)',path.name):continue
                             if path_key(path) in active_assets:protect('Active review asset',path)
                             else:add(path,root,'cache')
                     except (OSError,PixelError):protect('Unsafe cache folder',folder)

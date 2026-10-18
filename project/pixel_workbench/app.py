@@ -325,7 +325,7 @@ class Editor(DesktopUI):
             self.feedback_panel.refresh()
         if hasattr(self,"service") and hasattr(self,"quality_label"):
             review=self.service.quality.summary(self.doc)
-            labels={"pending":"待检查与 AI 看图复核","stale":"作品已修改，待复查","passed":"AI 自检通过", "needs_changes":"需修改后复查","uncertain":"尚未确认合格"}
+            labels={"pending":"待检查与 AI 看图复核","stale":"作品已修改，待复查","passed":"AI 自检通过", "needs_changes":"需修改后复查","uncertain":"尚未确认合格","partial":"部分动作已通过，图集待复核"}
             scope=review.get("scope",{})
             prefix=(scope["tag"]+" · ") if scope.get("tag") else ""
             self.quality_label.config(text="自检："+prefix+labels[review["status"]],fg=GREEN if review["status"]=="passed" else ACCENT)
@@ -1287,10 +1287,11 @@ def run_window(project=None):
 
 def main(project=None):
     import time
-    from .lifecycle import live_client, startup_lock, StartupBusy
+    from .lifecycle import live_client, startup_lock, StartupBusy, require_editor_version
 
     def activate(client):
         state = client.request("/state")
+        require_editor_version(state.get("app_version"))
         if project and str(Path(project).resolve()) != state.get("project_path"):
             client.mutate("/open", {"path": str(Path(project).resolve())})
         client.request("/activate", {})

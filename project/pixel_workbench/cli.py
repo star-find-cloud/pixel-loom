@@ -17,6 +17,7 @@ class RemoteError(RuntimeError):
         super().__init__(data.get("error", "Request failed"))
         self.code = data.get("code", "REMOTE_ERROR")
         self.recovery = data.get("recovery")
+        self.details = data.get("details")
 
 
 class Client:
@@ -85,6 +86,9 @@ def main(argv=None):
     export.add_argument("--kind", choices=("png", "sheet", "gif"), default="png")
     export.add_argument("--scale", type=int, default=1)
     export.add_argument("--columns", type=int)
+    export.add_argument('--sheet-format',choices=('native','aseprite_hash','aseprite_array','godot'),default='native')
+    export.add_argument('--tag',help='Export one named animation action')
+    export.add_argument('--overwrite',action='store_true',help='Replace all files belonging to this export bundle')
     export.add_argument("--draft",action="store_true",help="Export an explicitly unreviewed intermediate")
     for name in ("save", "open", "import"):
         action = commands.add_parser(name)
@@ -120,7 +124,8 @@ def main(argv=None):
             result = {"ok": True, "path": str(args.output.resolve())}
         elif args.command == "export":
             result = client.mutate("/export", {"path": str(args.output.resolve()), "kind": args.kind,
-                                                "scale": args.scale, "columns": args.columns, "draft":args.draft})
+                                                "scale": args.scale, "columns": args.columns, "draft":args.draft,
+                                                'sheet_format':args.sheet_format,'tag':args.tag,'overwrite':args.overwrite})
         elif args.command in ("save", "open", "import"):
             result = client.mutate("/" + args.command, {"path": str(args.path.resolve())})
         elif args.command == "new":

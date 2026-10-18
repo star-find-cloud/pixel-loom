@@ -11,7 +11,8 @@ from . import __version__
 from .model import Document, PixelError
 from .paths import WORKSPACE
 from .workflows import animation_plan
-from .quality import pending_feedback
+from .quality import effective_policy, pending_feedback
+from .sheet_export import FORMAT_LABELS,check_sidecars,export_paths
 from .messages import user_error
 
 BG = "#10141b"
@@ -839,6 +840,10 @@ class DesktopUI:
         if existing and existing.dialog.winfo_exists():
             if existing.doc_id==self.doc.id and existing.loaded_policy==self.doc.quality_policy and existing.region_names==list(self.doc.regions):
                 existing.dialog.lift()
+                if review_id is None:
+                    tag=self.tag_var.get()
+                    existing.settings_scope.set('动作 · '+tag if tag in self.doc.tags else '整张图集 / 全局要求')
+                    existing.load_policy()
                 existing.run(review_id)
                 return existing
             existing.dialog.destroy()
@@ -985,8 +990,7 @@ class DesktopUI:
         # Export the document shown when the window opened, even if AI edits later.
         source = Document.from_dict(self.doc.to_dict())
         source_key = (self.doc.id, self.doc.revision)
-        draft_export=tk.BooleanVar(value=self.service.quality.matching_record(source) is None or
-                                   self.service.quality.matching_record(source).get("status")!="passed" or
+        draft_export=tk.BooleanVar(value=not self.service.quality.coverage(source, self.tag_var.get() if self.tag_var.get() in source.tags else None)['passed'] or
                                    bool(pending_feedback(source)))
         body = tk.Frame(dialog, bg=PANEL, padx=22, pady=18)
         body.pack(fill="both", expand=True)
@@ -1010,6 +1014,11 @@ class DesktopUI:
         for title, var in [("倍数", scale), ("每行列数", columns)]:
             self.label(row, title, MUTED, SMALL).pack(side="left", padx=(8, 4))
             self._entry(row, var, 4).pack(side="left", ipady=5)
+        format_row=tk.Frame(body,bg=PANEL)
+        format_row.pack(fill='x',pady=(0,6))
+        self.label(format_row,'图集格式',MUTED,SMALL).pack(side='left',padx=(0,8))
+        sheet_format=tk.StringVar(value='原生 JSON')
+        self._option(format_row,sheet_format,list(FORMAT_LABELS)).pack(side='left')
         self.label(body, "PNG 导出当前帧；动画按所选动作导出。精灵表附带帧坐标、时长和动作标签。", MUTED, SMALL).pack(anchor="w", pady=7)
         self._check(body,"直接导出当前版本（不标记为 AI 验收）",draft_export).pack(anchor="w",pady=3)
         preview = tk.Label(body, bg=BG)
@@ -1021,6 +1030,8 @@ class DesktopUI:
             job[0], valid[0] = None, False
             try:
                 k = {"透明 PNG": "png", "精灵表 + JSON": "sheet", "动画 GIF": "gif"}[kind.get()]
+                if k=='sheet' and not format_row.winfo_manager():format_row.pack(fill='x',after=row,pady=(0,6))
+                elif k!='sheet' and format_row.winfo_manager():format_row.pack_forget()
                 s, c = scale.get(), columns.get()
                 if not 1 <= s <= 16 or not 1 <= c <= 256:
                     raise PixelError("导出倍数 1–16，每行列数 1–256")
@@ -1043,6 +1054,10 @@ class DesktopUI:
                 photo[0] = ImageTk.PhotoImage(im.resize((max(1, int(im.width*ratio)), max(1, int(im.height*ratio))), Image.Resampling.NEAREST))
                 preview.config(image=photo[0], text="")
                 hint.config(text=f"输出：{w} × {h} px  ·  {len(indexes)} 帧  ·  {s}× 最近邻\n" + ("布局预览含帧号；实际 PNG 精灵表保留透明背景且不含帧号。" if k == "sheet" else "GIF 预览前 12 帧，采用二值透明和 10ms 时长精度。" if k == "gif" else "保留 RGBA 透明通道。"), fg=MUTED)
+                if k=='sheet':
+                    description=('PNG + Aseprite JSON + SpriteFrames.tres；一起放入 Godot，纹理过滤选最近邻。'
+                        if FORMAT_LABELS[sheet_format.get()]=='godot' else 'PNG + '+sheet_format.get()+'；保留完整画布、毫秒时长与动作标签。')
+                    hint.config(text=hint.cget('text')+'\n'+description)
                 valid[0] = True
             except (ValueError, tk.TclError) as exc:
                 hint.config(text=user_error(exc), fg="#f19493")
@@ -1059,22 +1074,25 @@ class DesktopUI:
                 return
             k = {"透明 PNG": "png", "精灵表 + JSON": "sheet", "动画 GIF": "gif"}[kind.get()]
             chosen_tag=tag.get() if tag.get() in source.tags else None
+            fmt=FORMAT_LABELS[sheet_format.get()] if k=='sheet' else 'native'
             if not draft_export.get():
                 try:
-                    self.service.quality.require_pass(source,chosen_tag,frame=source.active_frame if k=="png" else None)
-                except ValueError:
-                    messagebox.showinfo("仍有待复查内容","可让 AI 先处理问题并复查，或选择“直接导出当前版本”。",parent=dialog)
+                    self.service.quality.require_pass(source,chosen_tag,frame=source.active_frame if k=="png" else None,continuous=k=='gif')
+                except ValueError as exc:
+                    messagebox.showinfo("导出范围需要确认",str(exc)+"\n可选择对应动作或“直接导出当前版本”。",parent=dialog)
                     return
             extension = ".gif" if k == "gif" else ".png"
             path = filedialog.asksaveasfilename(parent=dialog, initialdir=WORKSPACE / "exports", initialfile=source.name + ("-当前版" if draft_export.get() else "") + ("-sheet" if k == "sheet" else "") + extension,
                                                 defaultextension=extension, filetypes=[(k.upper(), "*"+extension)])
             if not path:
                 return
-            if k == "sheet" and Path(path).with_suffix(".json").exists():
-                if not messagebox.askyesno("覆盖精灵表元数据", "对应的 JSON 已存在，是否同时覆盖？", parent=dialog):
+            if any(p.exists() for p in export_paths(path,k,fmt)[1:]):
+                if not messagebox.askyesno("覆盖图集配套文件", "对应的 JSON 或 Godot 资源已存在，是否同时覆盖这次导出的配套文件？", parent=dialog):
                     return
             try:
-                source.export(path, k, scale=scale.get(), columns=columns.get(), tag=tag.get() if tag.get() in source.tags else None)
+                check_sidecars(path,k,fmt)
+                source.export(path, k, scale=scale.get(), columns=columns.get(), tag=chosen_tag,
+                              loop=effective_policy(source,chosen_tag)['loop'],sheet_format=fmt)
                 self.status_label.config(text=("已导出当前版本 · " if draft_export.get() else "已导出已验收成品 · ") + path, fg=GREEN)
                 dialog.destroy()
             except (OSError, ValueError) as exc:
@@ -1096,8 +1114,8 @@ class DesktopUI:
                 menu.add_command(label=name, command=tk._setit(tag, name))
             if tag.get() not in source.tags:
                 tag.set("全部帧")
-            record = self.service.quality.matching_record(source)
-            if not record or record.get("status") != "passed" or pending_feedback(source):
+            coverage = self.service.quality.coverage(source,tag.get() if tag.get() in source.tags else None)
+            if not coverage['passed'] or pending_feedback(source):
                 draft_export.set(True)
             if job[0]:
                 dialog.after_cancel(job[0])
@@ -1108,7 +1126,7 @@ class DesktopUI:
             poll_job[0] = None
             snapshot_status()
             poll_job[0] = dialog.after(600, poll)
-        for var in (kind, tag, scale, columns):
+        for var in (kind, tag, scale, columns, sheet_format):
             var.trace_add("write", schedule)
         preview.bind("<Configure>", lambda e: schedule())
         def cleanup(e):

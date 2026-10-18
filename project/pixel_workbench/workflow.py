@@ -32,7 +32,9 @@ class PartNote(TypedDict, total=False):
 
 def capabilities():
     return {'api_revision':API_REVISION,'workflow_revision':WORKFLOW_REVISION,
-            'features':['task_context','compact_reads','conditional_preview','isolated_preview','polygon_copy']}
+            'features':['task_context','compact_reads','conditional_preview','isolated_preview','polygon_copy','review_settings_modes',
+                        'tag_review','combined_review_export','engine_export_formats'],
+            'sheet_formats':['native','aseprite_hash','aseprite_array','godot']}
 
 def route(task=None):
     if task is not None and task not in ROUTES:raise PixelError('Unknown workflow task')
@@ -73,6 +75,43 @@ def compact_state(state):
     if 'proposed_state' in state:result['proposed_state']=compact_state(state['proposed_state'])
     result['detail']='summary'
     result['expand']="pixel_status() for palette, frame durations, regions and full reference/review state"
+    return result
+
+
+def compact_action_reply(state, action=None):
+    """Opt-in write receipts: retain outcomes/guards, not the unchanged whole document."""
+    keep=('ok','document_id','revision','name','width','height','active_layer','active_frame','unsaved_changes',
+          'app_version','project_path','can_undo','can_redo','settings_mode','settings_scope','updated_fields','effective_policy')
+    result={k:deepcopy(state[k]) for k in keep if k in state}
+    if 'layers' in state:result['layer_count']=len(state['layers'])
+    if 'frames' in state:result['frame_count']=len(state['frames'])
+    if 'palette' in state:result['palette_size']=len(state['palette'])
+    active=state.get('project_library',{}).get('active')
+    if active:result['project_id']=active['id']
+    if 'quality_review' in state:
+        result['quality_review']={k:deepcopy(v) for k,v in state['quality_review'].items()
+            if k in ('status','next_action','pending_issue_ids','summary')}
+        coverage=state['quality_review'].get('coverage')
+        if isinstance(coverage,dict):
+            result['quality_review']['coverage']={k:deepcopy(coverage[k]) for k in
+                ('passed','missing_tags','missing_frames','technical_failures') if k in coverage}
+    feedback=state.get('feedback')
+    if isinstance(feedback,dict):
+        result['feedback']={k:deepcopy(v) for k,v in feedback.items() if k!='issues'}
+    if 'issues' in state:
+        result['issues']=deepcopy(state['issues'])
+    elif action=='list' and isinstance(feedback,dict) and 'issues' in feedback:
+        result['issues']=deepcopy(feedback['issues'])
+    if 'issue' in state:result['issue']=deepcopy(state['issue'])
+    if 'review' in state:
+        review=state['review']
+        result['review']={k:deepcopy(v) for k,v in review.items() if k in
+            ('review_id','status','scope','method','summary','next_action','round','round_budget_reached')}
+        result['review']['remaining_findings']=[deepcopy(v) for v in review.get('visual_checks',[])
+            if v.get('verdict')!='pass']+[deepcopy(v) for v in review.get('warning_resolutions',[])
+            if v.get('verdict')!='acceptable']
+    result['detail']='receipt'
+    result['expand']='pixel_status() for full document state; compact=False retains the legacy full reply.'
     return result
 
 def part_key(doc,layer,frame=0):

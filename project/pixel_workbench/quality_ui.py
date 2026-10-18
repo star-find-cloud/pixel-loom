@@ -7,11 +7,11 @@ from tkinter import ttk
 from PIL import Image, ImageTk
 
 from .model import PixelError
-from .quality import validate_policy
+from .quality import effective_policy
 from .ui import BG, PANEL, FIELD, FG, MUTED, ACCENT, GREEN, SMALL, place_dialog, scrollable_widget
 
 LABELS = {"pending":"待 AI 看图复核","stale":"作品已修改 · 待复查","passed":"AI 自检通过",
-          "needs_changes":"需要修改后复查","uncertain":"尚未确认合格"}
+          "needs_changes":"需要修改后复查","uncertain":"尚未确认合格","partial":"部分动作已通过"}
 
 
 class QualityDialog:
@@ -48,7 +48,12 @@ class QualityDialog:
         side.pack_propagate(False)
         controls=editor._scroll_panel(side)
         editor._section(controls,"验收要求","随工程保存")
-        policy=validate_policy(editor.doc.quality_policy or {})
+        initial_tag=(editor.service.quality.tickets.get(review_id,{}).get('scope',{}).get('tag') if review_id else editor.tag_var.get())
+        self.scope_choices={'整张图集 / 全局要求':None,**{'动作 · '+name:name for name in editor.doc.tags}}
+        self.settings_scope=tk.StringVar(value='动作 · '+initial_tag if initial_tag in editor.doc.tags else '整张图集 / 全局要求')
+        editor._option(controls,self.settings_scope,list(self.scope_choices),lambda _:self.load_policy()).pack(fill='x',pady=6)
+        editor.label(controls,'动作继承全局要求；帧数按所选范围设置。',MUTED,SMALL,wraplength=225).pack(anchor='w')
+        policy=effective_policy(editor.doc,self.scope_choices[self.settings_scope.get()])
         self.loaded_policy=editor.doc.quality_policy
         self.variables={key:tk.StringVar(value="" if policy[key] is None else policy[key]) for key in
                         ("expected_width","expected_height","expected_frames","max_colors","brief","max_rounds")}
@@ -89,7 +94,7 @@ class QualityDialog:
         self.notebook=ttk.Notebook(right)
         self.notebook.pack(fill="both",expand=True)
         self.player_frame=tk.Frame(self.notebook,bg=BG)
-        self.notebook.add(self.player_frame,text="循环播放")
+        self.notebook.add(self.player_frame,text="动作播放")
         toolbar=tk.Frame(self.player_frame,bg=PANEL,padx=8,pady=6)
         toolbar.pack(fill="x")
         self.play_button=editor.button(toolbar,"暂停",self.toggle,pady=3)
@@ -99,6 +104,9 @@ class QualityDialog:
         editor._option(toolbar,self.speed,["1× 原速","0.5× 慢放","2× 快放"],lambda _:self.restart_tick()).pack(side="left",padx=8)
         self.player_info=editor.label(toolbar,"",MUTED,SMALL)
         self.player_info.pack(side="right")
+        self.sequence_choice=tk.StringVar(value='')
+        self.sequence_menu=editor._option(toolbar,self.sequence_choice,['当前动作'],lambda _:self.select_sequence())
+        self.sequence_menu.pack(side='left',padx=4)
         self.player=tk.Label(self.player_frame,bg="#0c1018")
         self.player.pack(fill="both",expand=True)
         self.player.bind("<Configure>",lambda e:self.render_player())
@@ -147,16 +155,41 @@ class QualityDialog:
             if self.editor.doc.id!=self.doc_id:
                 raise PixelError("工程已切换，请重新打开自检窗口")
             manager=self.editor.service.quality
-            tag=self.editor.tag_var.get()
-            self.ticket=manager.ticket(review_id,self.editor.doc) if review_id else manager.start(self.editor.doc,tag if tag in self.editor.doc.tags else None)
+            if review_id:
+                requested=manager.ticket(review_id,self.editor.doc)['scope']['tag']
+                self.settings_scope.set('动作 · '+requested if requested is not None else '整张图集 / 全局要求')
+                self.load_policy()
+            tag=self.scope_choices[self.settings_scope.get()]
+            self.ticket=manager.ticket(review_id,self.editor.doc) if review_id else manager.start(self.editor.doc,tag)
             self.page,self.index=0,0
-            self.play_indices=self.ticket["doc"].frame_indices(self.ticket["scope"]["tag"],playback=True)
+            self.sequence_labels={f"{i+1} · {s['tag'] or '未命名帧'}":i for i,s in enumerate(self.ticket['sequences'])}
+            menu=self.sequence_menu['menu'];menu.delete(0,'end')
+            for name in self.sequence_labels:menu.add_command(label=name,command=lambda v=name:(self.sequence_choice.set(v),self.select_sequence()))
+            self.sequence_choice.set(next(iter(self.sequence_labels)))
+            self.select_sequence()
             self.refresh_evidence()
             self.render_player()
             self.render_report()
             self.restart_tick()
         except (ValueError,OSError,KeyError) as exc:
             self.message.config(text=str(exc),fg="#f19493")
+
+    def load_policy(self):
+        policy=effective_policy(self.editor.doc,self.scope_choices[self.settings_scope.get()])
+        self.loaded_policy=self.editor.doc.quality_policy
+        for key,var in self.variables.items():var.set('' if policy[key] is None else policy[key])
+        self.transparent.set(policy['transparent_background'] is True)
+        self.uniform.set(policy['uniform_timing']);self.loop.set(policy['loop'])
+        self.regions.selection_clear(0,'end')
+        for i,name in enumerate(self.region_names):
+            if name in policy['fixed_regions']:self.regions.selection_set(i)
+        self.detail_regions.set(','.join(policy['detail_regions']))
+        self.criteria.delete('1.0','end');self.criteria.insert('1.0','\n'.join(policy['criteria']))
+
+    def select_sequence(self):
+        seq=self.ticket['sequences'][self.sequence_labels[self.sequence_choice.get()]]
+        self.play_indices=seq['playback_frames'];self.sequence_loop=seq['policy']['loop']
+        self.index=0;self.render_player();self.restart_tick()
 
     def save_settings(self):
         try:
@@ -168,7 +201,7 @@ class QualityDialog:
                             fixed_regions=[self.region_names[i] for i in self.regions.curselection()],
                             detail_regions=[v.strip() for v in self.detail_regions.get().replace("，",",").split(",") if v.strip()],
                             criteria=[line.strip() for line in self.criteria.get("1.0","end").splitlines() if line.strip()])
-            self.editor.dispatch("POST","/review/settings",{}, {"settings":settings,"source":"手动",
+            self.editor.dispatch("POST","/review/settings",{}, {"settings":settings,'tag':self.scope_choices[self.settings_scope.get()],"source":"手动",
                 "expected_document_id":self.editor.doc.id,"expected_revision":self.editor.doc.revision})
             self.loaded_policy=self.editor.doc.quality_policy
             self.run()
@@ -177,7 +210,7 @@ class QualityDialog:
 
     def refresh_evidence(self):
         data,self.sheets=self.editor.service.quality.evidence(self.ticket,self.page,mark_seen=False)
-        self.sheet_labels={"frame_contact":"帧对照","two_loop_timing":"真实时序 · 两次循环","loop_seam":"循环首尾","subject_reference":"原图参考","style_reference":"画风参考",
+        self.sheet_labels={"frame_contact":"帧对照","two_loop_timing":"真实时序 · 两次循环",'one_shot_timing':'真实时序 · 单次播放',"loop_seam":"循环首尾","subject_reference":"原图参考","style_reference":"画风参考",
                            "character_pose":"角色基准造型", "character_front":"角色正面", "character_left":"角色左侧", "character_right":"角色右侧", "character_back":"角色背面"}
         choices=["部位放大 · "+role[7:] if role.startswith("detail:") else self.sheet_labels.get(role,role) for role in data["image_roles"]]
         menu=self.sheet_menu["menu"]
@@ -226,12 +259,15 @@ class QualityDialog:
 
     def tick(self):
         self.player_job=None
+        if not self.sequence_loop and self.index==len(self.play_indices)-1:
+            self.playing=False;self.play_button.config(text='播放');return
         self.index=(self.index+1)%len(self.play_indices)
         self.render_player()
         self.restart_tick()
 
     def toggle(self):
         self.playing=not self.playing
+        if self.playing and not self.sequence_loop and self.index==len(self.play_indices)-1:self.index=0
         self.play_button.config(text="暂停" if self.playing else "播放")
         self.restart_tick()
 
@@ -246,10 +282,15 @@ class QualityDialog:
         if not self.ticket:
             return
         manager=self.editor.service.quality
-        stale=manager.digest(self.editor.doc)!=self.ticket["content_digest"] or self.editor.doc.id!=self.doc_id
+        stale=not manager.is_current(self.editor.doc,self.ticket) or self.editor.doc.id!=self.doc_id
         record=self.ticket["submitted"] or self.ticket.get("stored_record")
-        status="stale" if stale else record["status"] if record else "pending" if self.ticket["analysis"]["technical_passed"] else "needs_changes"
         scope=self.ticket["scope"]
+        coverage=manager.coverage(self.editor.doc,scope['tag'],scope['layers']) if not stale else None
+        blocked=[r for r in self.editor.doc.quality_reviews if coverage and r['review_id'] in coverage['blocked_review_ids']]
+        status=('stale' if stale else 'needs_changes' if not self.ticket['analysis']['technical_passed'] else
+                'passed' if coverage['passed'] else
+                'needs_changes' if coverage['technical_failures'] or any(r['status']=='needs_changes' for r in blocked) else
+                'uncertain' if blocked else 'partial' if coverage['review_ids'] else 'pending')
         self.badge.config(text=(scope["tag"]+" · " if scope["tag"] else "")+LABELS[status],fg=GREEN if status=="passed" else ACCENT)
         analysis=self.ticket["analysis"]
         lines=[f"检查范围：{scope['tag'] or '全部帧'} · {len(scope['frames'])} 帧 · {len(scope['layers'])} 图层",
@@ -284,21 +325,24 @@ class QualityDialog:
             labels={item["id"]:item["label"] for item in analysis["criteria"]}
             for item in record["visual_checks"]:
                 verdict={"pass":"通过","fail":"未通过","uncertain":"未确认"}[item['verdict']]
-                lines.append(f"{verdict} · {labels[item['criterion_id']]}\n  {item['reason']}")
+                lines.append(f"{verdict} · {labels.get(item['criterion_id'],item['criterion_id'])}\n  {item['reason']}")
             if record["warning_resolutions"]:
                 lines += ["","风险处理说明"]
                 for item in record["warning_resolutions"]:
                     verdict={"acceptable":"接受并说明","needs_fix":"需要修正","uncertain":"未确认"}[item["verdict"]]
                     lines.append(verdict+" · "+item["reason"])
         else:
-            lines.append("尚未收到 AI 结论；程序项全部通过也不会自动标记合格。")
+            if coverage and coverage['passed']:
+                lines.append(f"当前范围由 {len(coverage['review_ids'])} 份有效通过记录共同覆盖；本次新复查尚未提交。")
+            else:lines.append("尚未收到覆盖此范围的完整通过结论；程序项全部通过也不会自动标记合格。")
+        if coverage and not coverage['passed']:
+            lines.append('当前仍需复查的动作：'+('、'.join(coverage['missing_tags']) or '未命名帧 / 图集要求'))
         if stale:
             lines += ["","作品已变化：当前播放和检查结果来自旧快照，请重新检查。"]
         if self.editor.doc.quality_reviews:
             lines += ["","复查历史（最近 5 次）"]
-            digest=manager.digest(self.editor.doc)
             for item in self.editor.doc.quality_reviews[-5:]:
-                current="当前内容" if item["content_digest"]==digest else "旧版本"
+                current="当前范围有效" if manager.is_current(self.editor.doc,item) else "旧版本"
                 lines.append(f"第 {item['round']} 轮 · {LABELS[item['status']]} · {current}\n{item['summary']}")
         self.report.config(state="normal")
         self.report.delete("1.0","end")

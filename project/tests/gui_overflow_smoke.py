@@ -156,7 +156,14 @@ def main():
                 editor.service.checkpoint_current()
             history = editor.project_history_dialog()
             root.update()
-            assert history.listing.size() > 5 and history.listing.vertical_scrollbar.winfo_ismapped()
+            # Native transient mapping can arrive after Tk's idle layout pass on Windows.
+            for _ in range(20):
+                if history.dialog.winfo_viewable():break
+                wait(25)
+            assert history.listing.size() > 5 and history.listing.vertical_scrollbar.winfo_ismapped(), {
+                'versions':history.listing.size(),'scrollbar_mapped':history.listing.vertical_scrollbar.winfo_ismapped(),
+                'list_height':history.listing.winfo_height(),'window_viewable':history.dialog.winfo_viewable(),
+                'parent_state':root.state(),'parent_viewable':root.winfo_viewable()}
             history.listing.yview_moveto(1)
             assert history.listing.bbox(history.listing.size()-1) is not None
             history.dialog.destroy()

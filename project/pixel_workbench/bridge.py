@@ -80,8 +80,11 @@ class Bridge:
                     if code == "INVALID_ARGUMENT" and "conflict" in str(exc).lower():
                         code = "REVISION_CONFLICT"
                     status = 409 if code in ("REVISION_CONFLICT", "DOCUMENT_CONFLICT", "UNSAVED_CHANGES", "FILE_EXISTS", "REQUEST_ID_REUSED") else 400
-                    self.reply(status, {"ok": False, "error": str(exc), "code": code,
-                                         "recovery": getattr(exc, "recovery", None)})
+                    error = {"ok": False, "error": str(exc), "code": code,
+                             "recovery": getattr(exc, "recovery", None)}
+                    if getattr(exc, "details", None) is not None:
+                        error["details"] = exc.details
+                    self.reply(status, error)
 
             def do_GET(self):
                 self.handle_request("GET")

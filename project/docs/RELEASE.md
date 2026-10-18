@@ -6,6 +6,9 @@ The repository can be prepared locally without publishing a repository, uploadin
 python -m pip install -e ".[dev]"
 python -m unittest discover -s tests -v
 python -m tests.mcp_public_smoke
+python -m tests.mcp_api_first_batch_smoke
+python -m tests.mcp_tag_quality_smoke
+python -m tests.mcp_export_formats_smoke
 python -m tests.mcp_creation_smoke
 python -m tests.mcp_task_smoke
 python -m tests.mcp_reference_smoke
@@ -16,6 +19,8 @@ python -m tests.mcp_projects_smoke
 python -m tests.mcp_storage_smoke
 python -m tests.mcp_character_smoke
 python -m tests.gui_smoke
+python -m tests.gui_tag_quality_smoke
+python -m tests.gui_export_formats_smoke
 python -m tests.gui_editing_smoke
 python -m tests.gui_overflow_smoke
 python -m tests.gui_layout_smoke
@@ -35,6 +40,8 @@ python -m build
 ```
 
 The source ZIP uses an explicit allowlist. Private artwork, reference media, third-party research artifacts, client registration records, local tokens, virtual environments and build caches stay out. The sdist also prunes private workspace trees. The wheel contains the application package, intentionally supplied optional support-screen images.
+
+For local engine verification, run `python -m tests.godot_export_smoke --godot <Godot-4-console-executable>` (optional `--artifacts <isolated-output-folder>`). Godot is not a runtime dependency and is not bundled. This imports the PNGs in a real headless editor, loads SpriteFrames, and checks texture regions/pixels, relative paths, variable durations, loop and reverse/pingpong order. Do not report engine validation when only JSON/unit checks ran.
 
 ## Windows portable folder
 

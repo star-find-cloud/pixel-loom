@@ -65,6 +65,18 @@ class StorageTests(unittest.TestCase):
         self.assertTrue(active.exists());self.assertFalse(old.exists())
         self.assertTrue(all(p.exists() for p in untouched))
 
+    def test_all_action_assets_protected_and_expired_numbered_assets_cleanable(self):
+        folder=self.service.runtime/'review-cache'/uuid.uuid4().hex;folder.mkdir(parents=True)
+        active=[folder/'playback-0.gif',folder/'playback-1.png']
+        for path in active:path.write_bytes(b'active action')
+        old=self.service.runtime/'review-cache'/uuid.uuid4().hex/'playback-0.png'
+        old.parent.mkdir(parents=True);old.write_bytes(b'expired')
+        self.service.quality.tickets['multi']={'asset':active[0],'assets':[{'path':str(p)} for p in active]}
+        plan=self.plan()
+        self.assertEqual(plan['file_count'],1);self.assertEqual(plan['protected_count'],2)
+        self.apply(plan)
+        self.assertFalse(old.exists());self.assertTrue(all(p.exists() for p in active))
+
     def test_empty_authorization_and_expired_plan_never_delete(self):
         path=self.cache();plan=self.plan()
         with self.assertRaises(PixelError):self.service.storage.apply({'plan_id':plan['plan_id']})

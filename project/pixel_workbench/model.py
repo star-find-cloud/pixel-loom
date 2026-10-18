@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import copy
 import hashlib
+import io
 import json
 import math
 import os
@@ -30,10 +31,11 @@ MAX_PIXELS = 8_388_608
 
 
 class PixelError(ValueError):
-    def __init__(self, message, code="INVALID_ARGUMENT", recovery=None):
+    def __init__(self, message, code="INVALID_ARGUMENT", recovery=None, details=None):
         super().__init__(message)
         self.code = code
         self.recovery = recovery
+        self.details = details
 
 
 def integer(value, name="value", low=None, high=None):
@@ -316,8 +318,8 @@ class Document:
         self.events = self.events[-100:]
 
     def record_quality_review(self, record):
-        from .quality import validate_records
-        self.quality_reviews = validate_records([*self.quality_reviews[-15:], record])
+        from .quality import RECORD_LIMIT, validate_records
+        self.quality_reviews = validate_records([*self.quality_reviews[-(RECORD_LIMIT-1):], record])
         self.revision += 1
         self._event("AI 自检 · "+record["status"], "AI", 0)
 
@@ -980,15 +982,18 @@ class Document:
                 draw.text((x + 4, y + 4), f"#{frame}  {self.durations[frame]}ms", fill="#f4b477", font=font)
         return sheet
 
-    def export(self, path, kind="png", scale=1, columns=None, tag=None):
+    def export(self, path, kind="png", scale=1, columns=None, tag=None, loop=True, sheet_format='native'):
+        from .sheet_export import aseprite_data,check_sidecars,export_paths,godot_resource,write_bundle
         path = Path(path)
-        path.parent.mkdir(parents=True, exist_ok=True)
+        outputs=export_paths(path,kind,sheet_format)
+        check_sidecars(path,kind,sheet_format)
         scale = integer(scale, "scale", 1, 16)
         indexes = self.frame_indices(tag, playback=kind == "gif")
         frame_count = len(indexes) if kind in ("sheet", "gif") else 1
         if self.width * self.height * frame_count * scale * scale > 16_777_216:
             raise PixelError("Export exceeds 16M pixels; reduce scale or split the animation")
         frames = [self.composite(i) for i in indexes]
+        bundle={}
         if kind == "png":
             image = self.composite(self.active_frame)
         elif kind == "sheet":
@@ -1010,8 +1015,13 @@ class Document:
                 if covered:
                     exported_tags.append({"name": name, "start": min(covered), "end": max(covered),
                                           "direction": item.get("direction", "forward")})
-            atomic_json(path.with_suffix(".json"), {"image": path.name, "frames": metadata, "tags": exported_tags,
-                                                   "canvas": {"width": self.width, "height": self.height}})
+            data={"image": path.name, "frames": metadata, "tags": exported_tags,
+                  "canvas": {"width": self.width, "height": self.height}}
+            if sheet_format!='native':
+                data=aseprite_data(self,path,metadata,exported_tags,(image.width*scale,image.height*scale),
+                                   array=sheet_format=='aseprite_array',tag=tag)
+            bundle[path.with_suffix('.json')]=json.dumps(data,ensure_ascii=False,separators=(',',':')).encode('utf-8')
+            if sheet_format=='godot':bundle[path.with_suffix('.tres')]=godot_resource(self,path,metadata,tag).encode('utf-8')
         elif kind == "gif":
             # Reserve palette index 0 for transparency, shared by every frame.
             rgb = sorted({p[:3] for cel in frames for p in pixels(cel) if p[3] >= 128})
@@ -1026,15 +1036,23 @@ class Document:
                 p.putpalette(palette)
                 p.putdata([0 if color[3] < 128 else lookup[color[:3]] for color in pixels(cel)])
                 indexed.append(p.resize((self.width * scale, self.height * scale), Image.Resampling.NEAREST))
+            path.parent.mkdir(parents=True,exist_ok=True)
             indexed[0].save(path, format="GIF", save_all=True, append_images=indexed[1:],
-                            duration=[self.durations[index] for index in indexes], loop=0, transparency=0, disposal=2, optimize=False)
+                            duration=[self.durations[index] for index in indexes], transparency=0, disposal=2, optimize=False,
+                            **({'loop':0} if loop else {}))
             return {"path": str(path.resolve()), "kind": kind, "frames": len(frames)}
         else:
             raise PixelError("Export kind must be png, sheet, or gif")
         image = image.resize((image.width * scale, image.height * scale), Image.Resampling.NEAREST)
-        image.save(path, format="PNG")
-        return {"path": str(path.resolve()), "kind": kind, "width": image.width, "height": image.height,
+        png=io.BytesIO();image.save(png,format='PNG');bundle[path]=png.getvalue()
+        write_bundle(bundle)
+        result={"path": str(path.resolve()), "kind": kind, "width": image.width, "height": image.height,
                 "frames": len(frames) if kind == "sheet" else 1}
+        if sheet_format!='native':
+            result.update(sheet_format=sheet_format,metadata_path=str(path.with_suffix('.json').resolve()),
+                          files=[str(p.resolve()) for p in outputs])
+            if sheet_format=='godot':result['resource_path']=str(path.with_suffix('.tres').resolve())
+        return result
 
 
 OPERATION_GUIDE = {

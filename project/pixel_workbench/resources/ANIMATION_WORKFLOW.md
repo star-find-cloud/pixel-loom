@@ -10,6 +10,8 @@ Animation needs the human's request. Choose animation from compact onboarding an
 
 Specify fixed parts, anchors, moving parts, extent, frame durations and whether motion loops. Keep static geometry/highlights/labels fixed unless the intended material calls for movement. Do not move an entire object layer when only one internal part should change.
 
+Keep independent actions in named tags. Use pixel_review_settings(tag=..., settings=...) for each action's source frame count, loop/one-shot and fixed-part requirements, then pixel_review(tag=...). Global expected_frames describes the complete atlas, not every action. Current passing action reviews with identical layer sets combine for whole-sheet export; no idle-to-run loop is invented. After a local action edit recheck only stale scopes listed by REVIEW_REQUIRED. Read inspection_workflow for inherited requirements and export coverage.
+
 A loop uses phase = 2*pi*frame/frame_count. Use periodic terms or deliberately matched endpoints. Secondary parts may lag the main action instead of moving in lockstep. One-shot effects should be reviewed as one-shot; do not force an impact to look like seamless idle motion.
 
 ## 2. Separate static and moving cels

@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.7.16 — 2026-10-18: scoped reviews and engine-compatible exports
+
+- Keep the current editor's resolved data directory and workspace in generated MCP host configurations, including isolated portable launches. Verify that copying a configuration cannot silently reconnect to the default workspace.
+- Use the API's zero-based source frame numbers consistently in review contact, timing, seam and detail evidence; retain one-based frame numbers in the editor timeline.
+
+- Add optional Aseprite JSON hash/array sheet output while preserving native JSON by default. Keep untrimmed source frames, scaled rectangles/source sizes, milliseconds and rebased action tags/directions/repeat.
+- Add optional Godot 4 SpriteFrames bundles with portable relative PNG references, action order, variable timing and loop requirements. Reuse scoped passing coverage, layer filtering and draft/overwrite protections in all formats.
+- Integrate a conditional format choice into the existing export dialog and CLI/MCP. Expose on-demand MCP export guidance without adding creation presets.
+- Explain Godot's default Fix Alpha Border processing and the opt-in engine import setting for exact translucent colors; never change a user's engine project settings automatically.
+- Stage multi-file exports together, restore previous outputs on commit failure, and reject stale same-basename Godot resources when switching formats. Verify actual Godot resource loading as well as exchange metadata.
+
+- Add inherited per-tag review settings and scoped evidence fingerprints. Local action edits preserve unaffected action reviews; legacy records retain whole-document matching.
+- Combine current passing action reviews with identical layer sets for whole-atlas sheets. Check all named actions, overlaps, unnamed frames and global atlas constraints; expose missing scopes and contributing review IDs.
+- Separate full-review timing, applicable seams and playable evidence by action; one-shot evidence/player stops at the end. Keep whole-document review, draft exports and the existing sheet JSON format. Reviewed multi-action GIFs select an action.
+- Integrate action/global requirement selection and per-action playback into the existing optional review dialog. Retain up to 256 bounded review records so 128 supported tags are not displaced after 16 submissions.
+
+- Reject unknown MCP arguments and typed settings instead of silently ignoring them. Explain valid quality field names and preserve the document on validation failure.
+- Make review settings explicitly merge by default; add replace mode and report effective requirements. Preserve null/list clearing, undo and existing full replies.
+- Accept the same verdict words in visual checks and warning resolutions, preserving canonical saved records. Report missing, unknown and duplicate review IDs and missing evidence pages.
+- Add optional compact receipts for save/project actions, feedback, review settings/submission and undo/redo. Retain revision guards, questions, inspection images and unresolved review findings; avoid duplicate feedback lists in compact replies.
+- Verify both health and actual editor versions before reusing a running editor. Report the running/requested versions with save/close/restart instructions; never close a window automatically.
+- Add isolated unit, real two-client MCP, desktop and engine regression coverage for the API, scoped reviews and exchange formats. No finished-art presets are introduced.
+
 ## 0.7.15 — 2026-10-17: focused layout and reliable scrolling
 
 - Reorganize the desktop around a compact header, canvas and timeline. Give layers an expanding independent list, move colors and batch tools into separate tabs, and place frame duration controls beside playback. Preserve preview/feedback focus, all native features, scroll support, shortcuts and undo.

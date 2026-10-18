@@ -18,7 +18,8 @@ from .workflow import TaskStore, capabilities, compact_state, part_key
 from .operations import full_schema, guide
 from .paths import RUNTIME, WORKSPACE
 from .reference import ReferenceWorkspace, decoded_asset, encode_png, load_asset, make_draft, new_redraw_document
-from .quality import QualityManager, validate_policy
+from .quality import QualityManager, effective_policy, update_policy
+from .sheet_export import check_sidecars,export_paths
 from .feedback import FeedbackManager, summary as feedback_summary
 from .projects import ProjectLibrary, path_key, frame_at
 
@@ -616,10 +617,12 @@ class DocumentService:
             return {"ok":True,"presented":False,"reason":"Headless backend: inspect the returned image evidence and playback asset."},JSON_TYPE
         if path == "/review/settings":
             self.guard(payload)
-            policy = validate_policy({**(self.doc.quality_policy or {}),**payload["settings"]})
+            mode=payload.get("mode","merge");tag=payload.get('tag')
+            policy = update_policy(self.doc,payload['settings'],mode,tag)
             self.doc.apply([{"op":"quality_policy","data":policy}],"设置成品自检要求",source=payload.get("source","AI"))
             self.autosave()
-            return {"ok":True,**self.state()},JSON_TYPE
+            return {"ok":True,**self.state(),"settings_mode":mode,"updated_fields":sorted(payload["settings"]),
+                    "settings_scope":{"tag":tag},"effective_policy":effective_policy(self.doc,tag)},JSON_TYPE
         if path == "/review/submit":
             self.guard(payload)
             record = self.quality.submit(self.doc,payload["review_id"],payload["visual_checks"],payload.get("warning_resolutions",[]),
@@ -697,7 +700,9 @@ class DocumentService:
             suffix = ".gif" if kind == "gif" else ".png"
             if target.suffix.lower() != suffix:
                 raise PixelError(f"{kind} export needs a {suffix} filename")
-            outputs = [target, target.with_suffix(".json")] if kind == "sheet" else [target]
+            sheet_format=payload.get('sheet_format','native')
+            outputs = export_paths(target,kind,sheet_format)
+            check_sidecars(target,kind,sheet_format)
             if any(output.exists() for output in outputs) and not payload.get("overwrite", False):
                 raise PixelError("Export already exists. Choose a new name or explicitly set overwrite=true.", code="FILE_EXISTS")
             draft = payload.get("draft",False)
@@ -705,17 +710,20 @@ class DocumentService:
                 raise PixelError("draft must be boolean")
             if not draft:self.tasks.check_delivery(self.doc)
             record = None if draft else self.quality.require_pass(self.doc,payload.get("tag"),payload.get("layers"),
-                                                                 self.doc.active_frame if kind=="png" else None)
+                                                                 self.doc.active_frame if kind=="png" else None,continuous=kind=='gif')
             doc = self.doc
             if payload.get("layers") is not None:
                 doc = Document.from_dict(self.doc.to_dict())
                 included = {doc.layer(target_layer).id for target_layer in payload["layers"]}
                 for layer in doc.layers:
                     layer.visible = layer.id in included
-            result = doc.export(target, kind, payload.get("scale", 1), payload.get("columns"), payload.get("tag"))
+            result = doc.export(target, kind, payload.get("scale", 1), payload.get("columns"), payload.get("tag"),
+                                loop=effective_policy(self.doc,payload.get('tag'))['loop'],sheet_format=sheet_format)
             return {"ok": True, **result, "revision": self.doc.revision, "tag": payload.get("tag"),
                     "draft_export":draft,"delivery_status":"unreviewed_draft" if draft else "reviewed_final",
-                    "review_id":record["review_id"] if record else None}, JSON_TYPE
+                    "review_id":record["review_id"] if record else None,
+                    'review_ids':record['review_ids'] if record else [],
+                    'review_coverage':record['coverage'] if record else []}, JSON_TYPE
         elif path == "/shutdown":
             if self.dirty and not payload.get("discard_changes", False):
                 raise PixelError("Save the current project before closing", code="UNSAVED_CHANGES")

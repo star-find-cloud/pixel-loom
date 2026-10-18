@@ -13,6 +13,7 @@ TOPICS = {
     "decomposition_workflow": ("DECOMPOSITION_WORKFLOW.md", "Analyze a flattened image before separating and animating it"),
     "animation_workflow": ("ANIMATION_WORKFLOW.md", "Layers, motion planning and clean frames"),
     "inspection_workflow": ("INSPECTION_WORKFLOW.md", "Visual evidence, repairs and delivery"),
+    'export':('EXPORT_GUIDE.md','Native/Aseprite sheets and Godot 4 SpriteFrames'),
 }
 
 

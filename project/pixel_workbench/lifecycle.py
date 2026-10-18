@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+from collections import OrderedDict
 import os
 import subprocess
 import sys
@@ -9,10 +10,23 @@ import time
 from . import __version__
 from .paths import RUNTIME, WORKSPACE, prepare
 from .cli import Client
+from .model import PixelError
 
 
 class StartupBusy(RuntimeError):
     pass
+
+
+_verified_sessions = OrderedDict()
+
+
+def require_editor_version(running_version, health_version=None):
+    if running_version != __version__:
+        running = running_version or '未报告'
+        raise PixelError(f"Pixel Loom 版本不一致：正在运行 {running}，本次启动 {__version__}。"
+            "请先在旧窗口保存作品并关闭，再重新启动本版本。", code="VERSION_MISMATCH",
+            recovery="Save the running project and close that editor; restart the matching editor and MCP server. No window is closed automatically.",
+            details={"requested_version":__version__,"running_version":running_version,"health_version":health_version})
 
 
 def live_client():
@@ -21,8 +35,17 @@ def live_client():
         state = client.request("/health", timeout=2)
     except (RuntimeError, OSError, ValueError):
         return None
-    if state.get("version") != __version__:
-        raise RuntimeError("A different Pixel Loom version is running. Save and close that window before starting this version.")
+    require_editor_version(state.get("version"),state.get("version"))
+    # The token identifies this backend process. Verify its actual editor state once,
+    # without adding a full-state round trip to every subsequent tool call.
+    token=getattr(client,'token',None);url=getattr(client,'url',None)
+    key=(url,token,__version__) if isinstance(url,str) and isinstance(token,str) else None
+    if key is None or key not in _verified_sessions:
+        editor=client.request('/state',query={'compact':1},timeout=2)
+        require_editor_version(editor.get('app_version'),state.get('version'))
+        if key is not None:
+            _verified_sessions[key]=True
+            while len(_verified_sessions)>16:_verified_sessions.popitem(last=False)
     return client
 
 
