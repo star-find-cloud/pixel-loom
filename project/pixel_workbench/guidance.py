@@ -33,7 +33,7 @@ RECIPES = {
 def onboarding(state=None, workspace=None, task=None):
     return {"application": "Pixel Loom", "purpose": "Editable pixel art and animation shared by humans and MCP clients.",
             "first_steps": ["Read current_document before deciding to edit it or create a new one.",
-                "Before making artwork, follow creation_workflow.read_next: pixel_help(topic='workflow'). Read animation_workflow for motion and inspection_workflow before delivery; no external document is needed.",
+                "Before making artwork, follow creation_workflow.read_next: pixel_help(topic='workflow'). Read animation_workflow for motion and inspection_workflow before delivery; optional art_direction coordinates whole/detail views and requested host generation. No external document is needed.",
                 "For image creation/conversion, separate visible semantic objects and inspect isolated layers; hidden completion and animation are separate human-requested tasks. A hidden unfilled area is valid for static extraction.",
                 "Ordinary image conversion defaults to the automatic pixel draft. Do not artistically redraw proportions, silhouette or facial features unless the human explicitly requests it; prepared settings and references are not authorization.",
                 "Keep separate actions/variants as separate projects: pixel_projects list -> fork(name=...) BEFORE editing a new action. switch saves the outgoing work; compare shows retained animations together; versions/restore recover an old save into a new project.",

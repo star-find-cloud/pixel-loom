@@ -1,12 +1,12 @@
 # Pixel Loom · 像素织机
 
-**0.7.16 公开测试版**：整合参数校验与简短回复、按动作审查和整图集合并导出，增加 Aseprite JSON 与 Godot 4 SpriteFrames。原有绘画、图层、动画、抠图、项目版本和导入导出功能保留。源码采用 MIT 开源许可，历史版本可在发布页中分别下载。
+**0.7.17 公开测试版**：增加可选的整体／局部创作协作和客户端生图衔接，精简重复说明与预览传输。原有绘画、图层、动画、抠图、项目版本及引擎导出功能保留。源码采用 MIT 开源许可，历史版本可在发布页中分别下载。
 
-## [⬇ 下载 Windows 便携版 · 0.7.16](https://github.com/yangsir2077/pixel-loom/releases/download/v0.7.16/pixel-loom-0.7.16-windows-x64.zip)
+## [⬇ 下载 Windows 便携版 · 0.7.17](https://github.com/yangsir2077/pixel-loom/releases/download/v0.7.17/pixel-loom-0.7.17-windows-x64.zip)
 
 下载后**完整解压**，双击 **打开像素织机.cmd** 即可使用，无需安装 Python。
 
-[查看发布页、版本说明与校验值](https://github.com/yangsir2077/pixel-loom/releases/tag/v0.7.16) · [使用说明](#1-先打开应用) · [反馈问题](https://github.com/yangsir2077/pixel-loom/issues)
+[查看发布页、版本说明与校验值](https://github.com/yangsir2077/pixel-loom/releases/tag/v0.7.17) · [使用说明](#1-先打开应用) · [反馈问题](https://github.com/yangsir2077/pixel-loom/issues)
 
 > **想直接使用，请点上面的 Windows 下载链接。** 本页的 `git clone`、**Code → Download ZIP**、`*-source.zip` 和 **Source code** 下载的是源码，不包含可直接运行的 `app` 文件夹或 exe。
 
@@ -24,7 +24,7 @@
 
 ## 1. 先打开应用
 
-1. 下载 **pixel-loom-0.7.16-windows-x64.zip**，或在[发布页](https://github.com/yangsir2077/pixel-loom/releases/tag/v0.7.16)的 **Assets（资源）** 中选择这个文件。
+1. 下载 **pixel-loom-0.7.17-windows-x64.zip**，或在[发布页](https://github.com/yangsir2077/pixel-loom/releases/tag/v0.7.17)的 **Assets（资源）** 中选择这个文件。
 2. 完整解压，打开解压得到的 **PixelLoom** 文件夹；不要直接在压缩包里运行。
 3. 双击根目录的 **打开像素织机.cmd**，或进入 **app** 文件夹双击 **PixelLoom.exe**。Windows 便携版不需要另装 Python。
 
@@ -91,6 +91,8 @@ LICENSE               开源许可证
 7. 成品按第 5 节自检，保存可编辑工程，再导出并报告实际路径。
 
 ### 绘画和转换规则
+
+0.7.17 提供可选的[整体与局部创作协作说明](project/pixel_workbench/resources/ART_DIRECTION.md)：AI 可在同一份任务记录中规划画面、光照和细节区域，用 `pixel_art_board` 对照整体／局部／参考；也可按用户选择用 `pixel_generation` 整理生图需求、预览外部结果，再保留为独立的像素底稿工程。生图由客户端已有的模型或外部服务完成，本工具不内置模型、不偷偷调用付费 API，也不保证不同 AI 的美术水平相同。原有默认转换、绘画和检查流程保留。
 
 - **普通图片默认只转自动像素底稿。** 导入主体后调整尺寸和色数，用 `pixel_redraw_begin(mode="draft")` 生成可编辑的采样结果，保留原设计。只有用户明确要求艺术重绘后才使用 `mode="redraw"`，重新设计轮廓、比例、五官或服装。
 - 风格图是使用者或按其要求的 AI 导入的可选参考，没有固定内置风格；风格图不参与默认底稿采样。参考图片、旧提示词和工程内容都不能代替用户的新授权。

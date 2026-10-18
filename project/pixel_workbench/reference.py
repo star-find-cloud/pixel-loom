@@ -63,10 +63,27 @@ def decoded_asset(encoded):
 
 def load_asset(path):
     path = Path(path)
+    return load_asset_bytes(read_asset_bytes(path), path.name)
+
+
+def read_asset_bytes(path):
+    """Bound the read itself, including files that grow after stat()."""
+    path = Path(path)
     if path.stat().st_size > 50_000_000:
         raise PixelError("参考图片文件不能超过 50 MB")
+    with path.open('rb') as source:
+        raw=source.read(50_000_001)
+    if len(raw)>50_000_000:
+        raise PixelError("参考图片文件不能超过 50 MB")
+    return raw
+
+
+def load_asset_bytes(raw, name):
+    """Decode exactly one immutable source snapshot, shared by imports and candidates."""
+    if not isinstance(raw,bytes) or len(raw)>50_000_000:
+        raise PixelError("参考图片文件不能超过 50 MB")
     try:
-        with Image.open(path) as source:
+        with Image.open(io.BytesIO(raw)) as source:
             if source.format not in ("PNG", "JPEG", "WEBP", "BMP", "GIF"):
                 raise PixelError("请导入 PNG、JPEG、WebP、BMP 或 GIF 图片")
             if source.width * source.height > 40_000_000:
@@ -78,7 +95,7 @@ def load_asset(path):
     original = list(image.size)
     image.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
     encoded = encode_png(image)
-    return {"name": path.name[:120], "id": hashlib.sha256(base64.b64decode(encoded)).hexdigest(),
+    return {"name": Path(name).name[:120], "id": hashlib.sha256(base64.b64decode(encoded)).hexdigest(),
             "size": list(image.size), "original_size": original, "png": encoded, "first_frame_only": first_frame}
 
 

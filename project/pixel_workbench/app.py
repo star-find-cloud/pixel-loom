@@ -1188,6 +1188,22 @@ class Editor(DesktopUI):
         self.refresh_events()
         return dialog
 
+    def _accept_service_document(self):
+        self.doc = self.service.doc
+        self.path = self.service.path
+        self.saved_fingerprint = self.service.saved_fingerprint
+        self.dirty = self.service.dirty
+
+    def _reset_service_document_view(self, close_dialogs=False):
+        self.gesture=self.override=None
+        self.path_points=[]
+        self.selection_preview=None
+        self.feedback_draft=self.feedback_focus=None
+        if close_dialogs:
+            for name in ('quality_window','reference_window'):
+                window=getattr(self,name,None)
+                if window and window.dialog.winfo_exists():window.dialog.destroy()
+
     def dispatch(self, method, path, query, payload):
         self.sync_service()
         if method == "POST" and path == "/activate":
@@ -1201,7 +1217,8 @@ class Editor(DesktopUI):
             self.root.deiconify()
             window.dialog.lift()
             return {"ok":True,"presented":True,"playing":window.playing,"review_id":payload["review_id"]},"application/json; charset=utf-8"
-        read_only_preview = path in ("/task", "/validate", "/reference/preview", "/reference/cutout/preview", "/review/evidence", "/motion/check") or (
+        read_only_preview = path in ("/task", "/art/board", "/validate", "/reference/preview", "/reference/cutout/preview", "/review/evidence", "/motion/check") or (
+            path=='/generation' and payload.get('action','request') in ('request','preview')) or (
             path == '/reference/cutout' and payload.get('action') == 'export') or (
             path == '/storage' and payload.get('action','status') in ('status','plan')) or (
             path == "/character" and payload.get("action", "status") in ("status", "save")) or (
@@ -1213,22 +1230,24 @@ class Editor(DesktopUI):
             self.stop_play()
             self.sync_service()
         previous_identity=(self.doc.id,self.path)
-        response = self.service.dispatch(method, path, query, payload)
-        self.doc = self.service.doc
-        self.path = self.service.path
-        self.saved_fingerprint = self.service.saved_fingerprint
-        self.dirty = self.service.dirty
+        try:
+            response = self.service.dispatch(method, path, query, payload)
+        except (OSError, ValueError, RuntimeError):
+            # A switch can succeed before persistence fails. Do not let the next
+            # sync_service() silently restore the old GUI document over that work.
+            if (self.service.doc.id,self.service.path)!=previous_identity:
+                self._accept_service_document()
+                self._reset_service_document_view(close_dialogs=True)
+                self.refresh()
+                self.fit()
+                self.status_label.config(text='MCP · 文档已切换，后续操作失败；请检查并保存当前作品',fg=MUTED)
+            raise
+        self._accept_service_document()
         switched=method=='POST' and (path in ('/new','/open','/import','/redraw/begin') or
+                 path=='/generation' and payload.get('action')=='apply' and (self.doc.id,self.path)!=previous_identity or
                  path == '/projects' and ((self.doc.id,self.path)!=previous_identity or payload.get('action')=='use_version'))
         if switched:
-            self.gesture=self.override=None
-            self.path_points=[]
-            self.selection_preview=None
-            self.feedback_draft=self.feedback_focus=None
-            if path == '/projects':
-                for name in ('quality_window','reference_window'):
-                    window=getattr(self,name,None)
-                    if window and window.dialog.winfo_exists():window.dialog.destroy()
+            self._reset_service_document_view(close_dialogs=path in ('/projects','/generation'))
         if method == "POST" and not read_only_preview:
             if view_only:
                 self.refresh_view()

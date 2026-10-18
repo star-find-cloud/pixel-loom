@@ -41,6 +41,8 @@ python -m build
 
 The source ZIP uses an explicit allowlist. Private artwork, reference media, third-party research artifacts, client registration records, local tokens, virtual environments and build caches stay out. The sdist also prunes private workspace trees. The wheel contains the application package, intentionally supplied optional support-screen images.
 
+Maintain the documentation allowlist in tools/build_release.py and MANIFEST.in together. Source and portable packages include maintained guides/schema, not arbitrary local design drafts in docs/. An old portable staging folder containing extra documentation fails packaging without deleting those files; use a clean staging folder. Keep formal tests in the source bundle; local logs and build outputs belong outside the repository.
+
 For local engine verification, run `python -m tests.godot_export_smoke --godot <Godot-4-console-executable>` (optional `--artifacts <isolated-output-folder>`). Godot is not a runtime dependency and is not bundled. This imports the PNGs in a real headless editor, loads SpriteFrames, and checks texture regions/pixels, relative paths, variable durations, loop and reverse/pingpong order. Do not report engine validation when only JSON/unit checks ran.
 
 ## Windows portable folder

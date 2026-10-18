@@ -12,11 +12,21 @@ ROOT = Path(__file__).resolve().parents[1]
 TOP = ["README.md", "README.en.md", "LICENSE", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md",
        "THIRD_PARTY_NOTICES.md", "AGENTS.md", "CLAUDE.md", ".gitignore", "MANIFEST.in", "pyproject.toml", "requirements.txt",
        "setup.ps1", "launch.ps1", "打开像素织机.cmd", "mcp_server.py"]
-TREES = ["pixel_workbench", "docs", "skills", "tests", ".github"]
+TREES = ["pixel_workbench", "skills", "tests", ".github"]
+DOCS = ["USER_GUIDE.md", "AI_GUIDE.md", "ARCHITECTURE.md", "RELEASE.md", "operations.schema.json"]
 EXTRA = ["integrations/connect.py", "integrations/codex.toml", "integrations/claude-desktop.json",
          "tools/build_release.py", "tools/package_windows.py", "tools/package_handoff.py", "tools/frozen_entry.py", "tools/windows.spec"]
 PRIVATE_MARKERS = [re.compile(r"[A-Za-z]:[\\/]+xyx[0-9]+", re.I), re.compile(r"[A-Za-z]:[\\/]+Users[\\/]+[^\\/\s\"']+", re.I),
                    re.compile(r"wxid_[a-zA-Z0-9_]+"), re.compile(r"xwechat_files", re.I)]
+
+
+def documentation_files(root=ROOT):
+    """Ship maintained documentation, never arbitrary local plans dropped in docs/."""
+    paths = [root / "docs" / name for name in DOCS]
+    for path in paths:
+        if not path.is_file():
+            raise ValueError(f"Release file missing: docs/{path.name}")
+    return paths
 
 
 def source_files(root=ROOT):
@@ -30,7 +40,7 @@ def source_files(root=ROOT):
         for path in sorted((root / name).rglob("*")):
             if path.is_file() and "__pycache__" not in path.parts and path.suffix not in (".pyc", ".pyo"):
                 selected.append(path)
-    return sorted(set(selected))
+    return sorted(set(selected + documentation_files(root)))
 
 
 def audit(paths, root=ROOT):

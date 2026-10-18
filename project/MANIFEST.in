@@ -4,7 +4,9 @@ include .gitignore 打开像素织机.cmd
 include tools/build_release.py tools/package_windows.py tools/package_handoff.py tools/frozen_entry.py tools/windows.spec
 include integrations/connect.py integrations/codex.toml integrations/claude-desktop.json
 recursive-include pixel_workbench/resources *
-recursive-include docs *.md *.json
+# Reset old cached source manifests before selecting maintained documentation.
+prune docs
+include docs/USER_GUIDE.md docs/AI_GUIDE.md docs/ARCHITECTURE.md docs/RELEASE.md docs/operations.schema.json
 recursive-include skills *.md
 recursive-include tests *.py
 recursive-include .github *.yml

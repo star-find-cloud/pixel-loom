@@ -33,7 +33,8 @@ class PartNote(TypedDict, total=False):
 def capabilities():
     return {'api_revision':API_REVISION,'workflow_revision':WORKFLOW_REVISION,
             'features':['task_context','compact_reads','conditional_preview','isolated_preview','polygon_copy','review_settings_modes',
-                        'tag_review','combined_review_export','engine_export_formats'],
+                        'tag_review','combined_review_export','engine_export_formats','art_direction','generation_handoff','generation_handoff_v2',
+                        'conditional_generation_source'],
             'sheet_formats':['native','aseprite_hash','aseprite_array','godot']}
 
 def route(task=None):
@@ -43,6 +44,7 @@ def route(task=None):
                 'read_next':{'tool':'pixel_help','arguments':{'topic':'workflow'}}}
     r=deepcopy(ROUTES[task])
     return {'task':task,**r,'read_next':{'tool':'pixel_help','arguments':{'topic':r['help']}},
+            'optional_art_direction':{'tool':'pixel_help','arguments':{'topic':'art_direction'}},
             'defaults':{'static_first':True,'semantic_layers':True,
                         'completion':'only requested layers','animation':'only on human request',
                         'background_removal':'optional; object separation retains background separately'},
@@ -149,6 +151,9 @@ class TaskStore:
                 if not isinstance(c,dict) or c.get('task') not in ROUTES or not isinstance(c.get('parts'),list) or len(c['parts'])>64:raise ValueError('Invalid context')
                 if not all(k in c for k in ('stage','next_action','brief','baseline','completion_scope')):raise ValueError('Incomplete context')
                 if not isinstance(c['completion_scope'],list) or any(not isinstance(x,str) for x in c['completion_scope']):raise ValueError('Invalid scope')
+                if c.get('direction'):
+                    from .art_direction import validate_direction
+                    validate_direction(c['direction'])
                 for part in c['parts']:
                     if not isinstance(part,dict) or not all(k in part for k in ('layer','frame','extraction','hidden')):raise ValueError('Invalid part')
                     if not isinstance(part['layer'],str):raise ValueError('Invalid layer id')
@@ -176,8 +181,12 @@ class TaskStore:
         if c['task'] in ('text_static','image_static'):
             pending.extend(layer.id for layer in doc.layers if layer.visible and layer.opacity and layer.cels[0].getchannel('A').getbbox() and layer.id not in recorded)
         if brief:
+            direction=c.get('direction')
             c={k:c[k] for k in ('task','stage','next_action')}
             c['part_count']=len(v['context']['parts']); c['needs_check']=list(dict.fromkeys(pending))[:16]
+            if direction:
+                from .art_direction import summary
+                c['direction']=summary(direction,doc)
         return {'task_revision':v['revision'],'context':c,'assessment':'AI-reported semantic checks, not automatic segmentation or visual certification'}
 
     def update(self,doc,payload,receipts,quality):
@@ -201,6 +210,11 @@ class TaskStore:
             for k,limit in [('brief',1200),('next_action',300)]:
                 if payload.get(k) is not None:context[k]=_text(payload[k],k,limit)
             if not context['brief']:raise PixelError('Provide a short brief based on the real human request')
+            if 'direction' in payload:
+                from .art_direction import validate_direction
+                direction=validate_direction(payload['direction'],doc)
+                if direction:context['direction']=direction
+                else:context.pop('direction',None)
             if payload.get('completion_scope') is not None:
                 scope=payload['completion_scope']
                 if not isinstance(scope,list) or len(scope)>64 or any(not isinstance(x,str) or not x or len(x)>120 for x in scope):raise PixelError('Invalid completion_scope')

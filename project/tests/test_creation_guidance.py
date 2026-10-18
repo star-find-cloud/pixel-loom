@@ -32,6 +32,7 @@ class CreationGuidanceTests(unittest.TestCase):
                 self.assertGreater(len(content["guide"]), 1500)
                 for related in content["related"]:
                     self.assertIn(related["arguments"]["topic"], TOPICS)
+                self.assertLessEqual(len(content['related']), 4)
             resource = json.loads(mcp_server.creation_workflow_resource())
         self.assertEqual(set(resource), set(TOPICS))
 

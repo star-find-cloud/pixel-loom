@@ -46,6 +46,11 @@ def show(editor):
             if context is None:lines+=['当前没有 AI 工作记录。连接后从 pixel_onboard 开始即可；旧工程可以照常使用。']
             else:
                 lines+=[f"{ROUTES[context['task']]['title']} · {context['stage']} · 记录 {data['task_revision']}",context['brief'],f"下一步：{context['next_action'] or '由 AI 根据任务继续'}"]
+                direction=context.get('direction')
+                if direction:
+                    lines.append('创作路线：'+('工具直接绘制' if direction['route']=='native' else '客户端生图协作（本工具不调用模型）'))
+                    lines.append('画布：'+' × '.join(map(str,direction['canvas']))+' px · 局部观察区域 '+str(len(direction['regions'])))
+                    if direction['lighting']:lines.append('光照：'+direction['lighting'])
                 for part in context['parts']:
                     lines.append(f"{part.get('name',part['layer'])}：{part['extraction']} / 遮挡处 {part['hidden']}"+('（需重新检查）' if not part['current'] else ''))
             replace(summary,'\n'.join(lines),keep_view=True)

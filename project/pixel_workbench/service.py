@@ -42,6 +42,8 @@ class DocumentService:
         self.saved_fingerprint = self.doc.fingerprint()
         self.requests = OrderedDict()
         self.tasks = TaskStore(self.runtime)
+        from .generation import GenerationManager
+        self.generation = GenerationManager()
         self.preview_cache = OrderedDict()
         self.part_receipts = OrderedDict()
         self.closing = False
@@ -606,6 +608,11 @@ class DocumentService:
             self.guard(payload)
             result=self.tasks.update(self.doc,payload,self.part_receipts,self.quality)
             return {'ok':True,'document_id':self.doc.id,'revision':self.doc.revision,**result},JSON_TYPE
+        if path=='/art/board':
+            from .art_direction import board
+            return board(self,payload),JSON_TYPE
+        if path=='/generation':
+            return self.generation.action(self,payload),JSON_TYPE
         if path=='/projects':
             return self.projects_action(payload),JSON_TYPE
         if path == "/feedback":

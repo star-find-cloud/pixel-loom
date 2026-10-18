@@ -14,6 +14,18 @@ TOPICS = {
     "animation_workflow": ("ANIMATION_WORKFLOW.md", "Layers, motion planning and clean frames"),
     "inspection_workflow": ("INSPECTION_WORKFLOW.md", "Visual evidence, repairs and delivery"),
     'export':('EXPORT_GUIDE.md','Native/Aseprite sheets and Godot 4 SpriteFrames'),
+    'art_direction':('ART_DIRECTION.md','Whole/detail coordination and optional host-generation handoff'),
+}
+RELATED = {
+    'workflow': ('text_workflow', 'image_workflow', 'art_direction'),
+    'text_workflow': ('art_direction', 'inspection_workflow'),
+    'image_workflow': ('decomposition_workflow', 'inspection_workflow'),
+    'decomposition_workflow': ('completion_workflow', 'animation_workflow', 'inspection_workflow'),
+    'completion_workflow': ('decomposition_workflow', 'inspection_workflow'),
+    'animation_workflow': ('decomposition_workflow', 'inspection_workflow', 'export'),
+    'inspection_workflow': ('export',),
+    'export': ('inspection_workflow',),
+    'art_direction': ('text_workflow', 'image_workflow', 'decomposition_workflow', 'inspection_workflow'),
 }
 
 
@@ -59,7 +71,7 @@ def workflow_help(topic="workflow"):
         "workflow_revision":WORKFLOW_REVISION,
         "title": title,
         "guide": (GUIDE_DIR / filename).read_text(encoding="utf-8"),
-        "related": [{"tool": "pixel_help", "arguments": {"topic": other}} for other in TOPICS if other != topic],
+        "related": [{"tool": "pixel_help", "arguments": {"topic": other}} for other in RELATED[topic]],
         "operation_help": "pixel_help(operation='<observed operation name>') returns exact current schemas.",
     }
 

@@ -13,6 +13,20 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from pixel_workbench import __version__
+from tools.build_release import documentation_files
+
+
+def copy_documentation(folder, root=ROOT):
+    target = folder / "docs"
+    paths = documentation_files(root)
+    allowed = {path.name for path in paths}
+    unexpected = [path.relative_to(target).as_posix() for path in target.rglob('*')
+                  if path.is_file() and path.relative_to(target).as_posix() not in allowed]
+    if unexpected:
+        raise ValueError('Unmaintained portable docs; use a clean staging folder: ' + ', '.join(sorted(unexpected)[:8]))
+    target.mkdir(parents=True, exist_ok=True)
+    for path in paths:
+        shutil.copy2(path, target / path.name)
 
 
 def component_names(folder):
@@ -89,8 +103,8 @@ def main():
         raise SystemExit("Build tools/windows.spec first")
     for name in ("README.md", "README.en.md", "LICENSE", "THIRD_PARTY_NOTICES.md", "CHANGELOG.md"):
         shutil.copy2(ROOT / name, folder / name)
-    for name in ("docs", "skills"):
-        shutil.copytree(ROOT / name, folder / name, dirs_exist_ok=True)
+    copy_documentation(folder)
+    shutil.copytree(ROOT / "skills", folder / "skills", dirs_exist_ok=True)
     shutil.copy2(ROOT/'pixel_workbench/resources/FEEDBACK_IMAGE_GUIDE.md',folder/'截图反馈给AI.md')
     included = collect_notices(folder)
     target = ROOT / "dist" / f"pixel-loom-{__version__}-windows-x64.zip"

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.7.17 — 2026-10-18: optional art coordination and host-generation handoff
+
+- Keep coordination optional and reuse the existing task; remove repeated guide links and inspection steps. Boards omit identical whole/detail panels and unchanged replies omit repeated statistics. Generation adjustments can conditionally omit an already-viewed original while always returning the new draft.
+- Share an explicit maintained-document allowlist between source and portable packaging; keep local design drafts outside deliverables without deleting them.
+
+- Keep native drawing and the existing five task routes. Optional direction notes in pixel_task record shared style/light/palette goals and bounded detail areas without painting, adding versions or changing the project format.
+- Add read-only pixel_art_board whole/detail/reference evidence with actual source dimensions, stale-plan checks and unchanged-image reuse. No automatic aesthetic approval or replacement for isolated-layer review.
+- Add provider-neutral pixel_generation request/preview/apply. The host supplies an actual image generator or external result; no network/model/key/CLI execution is built in. Preview uses the existing automatic pixel draft conversion and apply preserves outgoing work as a separate saved project.
+- Bind temporary candidates to source hashes, document/task/reference revisions and expiry; reject changed inputs. Exact apply retries do not duplicate projects; post-apply save failures report their actual state. Existing cutout, layer separation, review, undo and export rules stay intact.
+- Keep the desktop on the actual applied candidate after a post-switch reference/save failure; mark unsaved work explicitly, close old document dialogs, and preserve error/retry semantics. Validate real released-MCP/new-backend and new-MCP/released-backend combinations in isolated local tests.
+- Decode candidate images from the same bounded immutable bytes that were hashed. Reject wrong-action fields and implicit width/height/colors, retain strict pre-coercion validation, handle long default names and announce animated first-frame input. Invalidate subject-specific reference crops when the generated subject changes.
+- Attempt a separate emergency recovery file and provide a structured task-recovery payload after partial I/O failure. Release applied candidate documents from the temporary cache. Add two-client stale-plan, simultaneous-apply and later-edit retry tests without changing the default drawing/conversion route.
+- Add isolated unit, fresh MCP-client and desktop-dispatch regressions. Tests validate software behavior, not every AI's artistic quality.
+
 ## 0.7.16 — 2026-10-18: scoped reviews and engine-compatible exports
 
 - Keep the current editor's resolved data directory and workspace in generated MCP host configurations, including isolated portable launches. Verify that copying a configuration cannot silently reconnect to the default workspace.
