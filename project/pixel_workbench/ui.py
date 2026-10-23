@@ -759,14 +759,14 @@ class DesktopUI:
         name=tk.Label(tab,text=title[:25],bg=background,fg=ACCENT if entry['active'] else MUTED,
                       font=SMALL,padx=6,pady=5,anchor='w',cursor=pointer)
         name.pack(side='left')
-        close=tk.Label(tab,text='✕',bg=background,fg=MUTED,font=SMALL,padx=4,pady=5,cursor=pointer)
+        close=tk.Label(tab,text='✕',bg=background,fg=MUTED,font=SMALL,padx=4,pady=5,cursor='hand2')
         close.pack(side='left')
         tab.entry,tab.name_label,tab.close_label=entry,name,close
         if entry['available']:
             name.bind('<Button-1>',lambda event,key=entry['id']:self.project_action('switch',project_id=key))
-            close.bind('<Button-1>',lambda event,key=entry['id']:self.close_project_tab(event,key))
-            close.bind('<Enter>',lambda event:close.config(fg=FG))
-            close.bind('<Leave>',lambda event:close.config(fg=MUTED))
+        close.bind('<Button-1>',lambda event,key=entry['id']:self.close_project_tab(event,key))
+        close.bind('<Enter>',lambda event:close.config(fg=FG))
+        close.bind('<Leave>',lambda event:close.config(fg=MUTED))
         for widget in (tab,name,close):
             self.bind_project_scroll(widget)
             widget.bind('<Button-3>',lambda event,key=entry['id']:self.project_context_menu(event,key))

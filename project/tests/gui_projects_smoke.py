@@ -112,6 +112,19 @@ def main():
             assert len(editor.service.projects.listing())==4
             assert first['id'] in editor.project_tab_buttons
             assert not editor.service.projects.listing(closed=True)
+            missing=Path(added['path'])
+            moved=missing.with_suffix('.moved')
+            missing.rename(moved)
+            editor.refresh_projects()
+            root.update()
+            unavailable=editor.project_tab_buttons[added['id']]
+            assert not unavailable.name_label.bind('<Button-1>')
+            assert unavailable.close_label.bind('<Button-1>')
+            assert editor.close_projects([added['id']])
+            assert added['id'] not in editor.project_tab_buttons and moved.is_file()
+            moved.rename(missing)
+            assert editor.project_action('reopen',project_id=added['id'])
+            manager.refresh()
             manager.select_tab('open')
             manager.trees['open'].selection_set(manager.trees['open'].get_children())
             with patch('pixel_workbench.ui.messagebox.askyesno',return_value=True):

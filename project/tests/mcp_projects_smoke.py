@@ -27,8 +27,10 @@ async def run(server_executable=None):
                 assert "action='fork'" in init.instructions
                 sessions.append(session)
             first,second=sessions
-            tools = {item.name for item in (await first.list_tools()).tools}
+            definitions = {item.name:item for item in (await first.list_tools()).tools}
+            tools = set(definitions)
             assert 'pixel_effect' not in tools and 'pixel_edit' in tools
+            assert 'keep_project_id' in definitions['pixel_projects'].inputSchema['properties']
             guide=data(await first.call_tool('pixel_onboard',{}))
             state=guide['current_document']
             def tokens(state):return dict(expected_revision=state['revision'],expected_document_id=state['document_id'])
@@ -86,6 +88,11 @@ async def run(server_executable=None):
             reopened=data(await second.call_tool('pixel_projects',dict(action='reopen',project_id=idle_entry['id'],**tokens(closed))))
             assert len(reopened['projects'])==3 and idle_entry['id'] in [entry['id'] for entry in reopened['projects']]
             assert not data(await second.call_tool('pixel_projects',dict(action='closed')))['projects']
+            selected=data(await first.call_tool('pixel_projects',dict(action='switch',project_id=walk_entry['id'],**tokens(reopened))))
+            kept=data(await second.call_tool('pixel_projects',dict(action='close',project_id=walk_entry['id'],
+                keep_project_id=idle_entry['id'],**tokens(selected))))
+            assert kept['document_id']==idle_entry['document_id']
+            reopened=data(await first.call_tool('pixel_projects',dict(action='reopen',project_id=walk_entry['id'],**tokens(kept))))
             removed=data(await first.call_tool('pixel_projects',dict(action='remove',project_id=idle_entry['id'],**tokens(reopened))))
             assert len(removed['projects'])==2 and removed['files_preserved'] and Path(idle_entry['path']).is_file()
             deleted=data(await second.call_tool('pixel_projects',dict(action='deleted')))

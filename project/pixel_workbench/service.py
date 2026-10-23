@@ -286,7 +286,7 @@ class DocumentService:
                 right=[entry for entry in open_entries[index+1:] if entry['id'] not in closing_ids]
                 left=[entry for entry in reversed(open_entries[:index]) if entry['id'] not in closing_ids]
                 destination=None
-                for entry in [*[e for e in survivors if e['id']==keep_id],*right[:1],*left[:1]]:
+                for entry in [*[e for e in survivors if e['id']==keep_id],*right,*left]:
                     if not entry['available']:continue
                     try:destination=(Document.open(entry['path']),entry['path']);break
                     except (OSError,ValueError,KeyError):continue

@@ -7,6 +7,8 @@
 - Hidden tabs persist in `project-library.json` as `closed_at` and appear under “项目管理 → 已收起”. Reopening restores the same identity and number, and switching to a closed project reopens its tab automatically.
 - MCP parity: `pixel_projects` gains `close` / `closed` / `reopen`; `project_library` reports `open_count` and `closed_count` next to the existing counts.
 - Tests: unit cases for close, reopen, persistence across restart and neighbour switching, plus GUI coverage of the × control and the reopen flow.
+- Skip missing or corrupt neighbours until another valid open tab is found, and keep the × usable for unavailable inactive files. Expose keep_project_id in the MCP schema and verify it through real clients.
+- Add contributor acknowledgments and README links, preserve original commit authorship, and include CONTRIBUTORS.md in future source and portable packages.
 
 ## 0.7.17 — 2026-10-18: optional art coordination and host-generation handoff
 

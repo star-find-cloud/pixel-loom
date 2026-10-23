@@ -242,6 +242,35 @@ class ProjectTests(unittest.TestCase):
         self.assertFalse(self.service.dirty)
         self.assertTrue(Path(entry['path']).is_file())
 
+    def test_close_active_finds_farther_valid_right_tab(self):
+        for name in ('Walk','Attack','Dodge'):self.call('fork',name=name)
+        entries=self.call('list')['projects']
+        self.call('switch',project_id=entries[1]['id'])
+        self.paint()
+        Path(entries[0]['path']).unlink()
+        Path(entries[2]['path']).write_text('corrupt fixture',encoding='utf-8')
+        self.call('close',project_id=entries[1]['id'])
+        self.assertEqual(self.service.doc.id,entries[3]['document_id'])
+        self.assertTrue(Document.open(entries[1]['path']).composite().getpixel((2,3))[3])
+
+    def test_close_active_finds_farther_valid_left_tab(self):
+        for name in ('Walk','Attack','Dodge'):self.call('fork',name=name)
+        entries=self.call('list')['projects']
+        self.call('switch',project_id=entries[2]['id'])
+        Path(entries[1]['path']).write_text('corrupt fixture',encoding='utf-8')
+        Path(entries[3]['path']).unlink()
+        self.call('close',project_id=entries[2]['id'])
+        self.assertEqual(self.service.doc.id,entries[0]['document_id'])
+
+    def test_close_prefers_explicit_surviving_tab_over_nearest_neighbour(self):
+        for name in ('Walk','Attack'):self.call('fork',name=name)
+        entries=self.call('list')['projects']
+        self.call('switch',project_id=entries[1]['id'])
+        result=self.call('close',project_id=entries[1]['id'],keep_project_id=entries[0]['id'])
+        self.assertEqual(self.service.doc.id,entries[0]['document_id'])
+        self.assertEqual(result['changed_project_ids'],[entries[1]['id']])
+        self.assertTrue(Path(entries[1]['path']).is_file())
+
     def test_close_persists_across_restart_and_reopen_restores_same_identity(self):
         first=self.call('fork',name='Walk')['projects'][0]
         self.call('close',project_ids=[first['id']])

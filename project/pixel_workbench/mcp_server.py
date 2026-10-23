@@ -250,7 +250,8 @@ def pixel_projects(action: Literal['list','register','fork','new','switch','vers
                    path: str | None=None, name: str | None=None, version_id: str | None=None,
                    width: int=48, height: int=48, view: Literal['contact','time']='contact',
                    page: int=0, time_ms: int=0, limit: int=20, pinned: bool | None=None,
-                   expected_revision: int | None=None, expected_document_id: str | None=None, compact: bool=False) -> CallToolResult:
+                   expected_revision: int | None=None, expected_document_id: str | None=None, compact: bool=False,
+                   keep_project_id: str | None=None) -> CallToolResult:
     """Retain separate projects instead of overwriting an earlier animation.
 
     list returns ordered numbered projects and stable project ids. register adds an existing .pixloom without switching.
